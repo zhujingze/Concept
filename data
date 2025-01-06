@@ -1,0 +1,82 @@
+#data
+from torch.utils.data import Dataset, DataLoader
+from transformers import AutoTokenizer
+
+class QuizDataset(Dataset):
+    def __init__(self, csv_file, tokenizer_name, max_length=128):
+        # 加载数据
+        self.data = []
+        with open(csv_file, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                self.data.append(row)
+
+        # 初始化分词器
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+        self.max_length = max_length
+        self.label_mapping = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        row = self.data[idx]
+        question = row["Question"]
+        options = [row["OptionA"], row["OptionB"], row["OptionC"], row["OptionD"]]
+        correct_answer = self.label_mapping[row["Answer"]]
+
+        # 将问题和每个选项组合起来，进行分词
+        encodings = self.tokenizer(
+            [f"{question} {option}" for option in options],
+            padding="max_length",
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors="pt"
+        )
+
+        # 将标签作为目标
+        return {
+            "input_ids": encodings["input_ids"],       # shape: (4, max_length)
+            "attention_mask": encodings["attention_mask"],  # shape: (4, max_length)
+            "label": correct_answer                   # 正确答案的索引
+        }
+
+# 假设你的 CSV 文件是 'questions.csv'
+csv_file = 'questions.csv'
+tokenizer_name = 'bert-base-uncased'
+
+dataset = QuizDataset(csv_file, tokenizer_name)
+train_dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
+
+#train
+from transformers import BertForMultipleChoice, AdamW
+import torch.nn.functional as F
+
+# 初始化模型和优化器
+model = BertForMultipleChoice.from_pretrained("bert-base-uncased")
+optimizer = AdamW(model.parameters(), lr=1e-5)
+
+# 训练循环
+for epoch in range(3):  # 假设训练 3 个 epoch
+    model.train()
+    for batch in train_dataloader:
+        optimizer.zero_grad()
+
+        # 获取输入数据
+        input_ids = batch["input_ids"]        # shape: (batch_size, 4, max_length)
+        attention_mask = batch["attention_mask"]  # shape: (batch_size, 4, max_length)
+        labels = batch["label"]              # shape: (batch_size,)
+
+        # 前向传播
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            labels=labels
+        )
+
+        # 损失值和反向传播
+        loss = outputs.loss
+        loss.backward()
+        optimizer.step()
+
+        print(f"Loss: {loss.item()}")
