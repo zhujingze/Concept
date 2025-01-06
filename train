@@ -121,3 +121,25 @@ for epoch in range(num_epochs):
         optimizer.step()
 
     print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data)
+
+def compute_loss(outputs, batch):
+    """
+    计算交叉熵损失。
+    
+    参数：
+        outputs: 模型的输出 logits，形状为 (batch_size, num_options)
+        batch: 当前批次的数据字典，包含正确的标签 "label"
+    
+    返回：
+        loss: 计算得到的损失值
+    """
+    # 获取标签
+    labels = batch["label"]  # 形状: (batch_size, )
+
+    # 使用 CrossEntropyLoss 计算损失
+    criterion = nn.CrossEntropyLoss()
+    
+    # 计算损失 (outputs 为 logits, labels 为正确的答案索引)
+    loss = criterion(outputs, labels)
+    
+    return loss
