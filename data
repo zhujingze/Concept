@@ -80,3 +80,42 @@ for epoch in range(3):  # 假设训练 3 个 epoch
         optimizer.step()
 
         print(f"Loss: {loss.item()}")
+
+import torch
+import pandas as pd
+from torch.utils.data import Dataset
+from transformers import AutoTokenizer
+
+class MathProblemDataset(Dataset):
+    def __init__(self, csv_file, tokenizer, max_length=512):
+        # 读取 CSV 文件
+        self.data = pd.read_csv(csv_file)
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        # 获取问题和选项
+        question = self.data.iloc[idx, 0]  # 第 1 列是问题
+        option_a = self.data.iloc[idx, 1]  # 第 2 列是选项 A
+        option_b = self.data.iloc[idx, 2]  # 第 3 列是选项 B
+        option_c = self.data.iloc[idx, 3]  # 第 4 列是选项 C
+        option_d = self.data.iloc[idx, 4]  # 第 5 列是选项 D
+        correct_answer = self.data.iloc[idx, 5]  # 第 6 列是正确答案（A/B/C/D）
+
+        # 合并问题和选项作为输入
+        input_text = f"Question: {question} A: {option_a} B: {option_b} C: {option_c} D: {option_d}"
+        
+        # 对输入文本进行编码
+        encoded_input = self.tokenizer(input_text, truncation=True, padding='max_length', max_length=self.max_length, return_tensors="pt")
+
+        # 将答案转换为整数标签（A -> 0, B -> 1, C -> 2, D -> 3）
+        answer_map = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+        label = answer_map.get(correct_answer, -1)  # 如果答案不在字典里，返回 -1（处理异常）
+
+        # 由于返回的是字典，需要从字典中取出tensor
+        return encoded_input['input_ids'].squeeze(0), encoded_input['attention_mask'].squeeze(0), torch.tensor(label)
+
+
