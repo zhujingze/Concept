@@ -119,3 +119,50 @@ class MathProblemDataset(Dataset):
         return encoded_input['input_ids'].squeeze(0), encoded_input['attention_mask'].squeeze(0), torch.tensor(label)
 
 
+class MultipleChoiceDataset(Dataset):
+    def __init__(self, csv_file, tokenizer, max_length=512):
+        """
+        Args:
+            csv_file (str): The path to the CSV file containing the data.
+            tokenizer (transformers.PreTrainedTokenizer): The tokenizer to tokenize the text.
+            max_length (int): The maximum sequence length.
+        """
+        self.data = pd.read_csv(csv_file, header=None)
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.choices = ["A", "B", "C", "D"]  # The choices in the question
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        # Get the question and choices
+        question = self.data.iloc[idx, 0]
+        choices = [self.data.iloc[idx, i+1] for i in range(4)]
+        answer = self.data.iloc[idx, 5]  # Assuming the answer is in the last column
+        
+        # Format the input text for the multiple-choice question
+        input_text = f"Question: {question}\n"
+        for i, choice in enumerate(choices):
+            input_text += f"{self.choices[i]}. {choice}\n"
+        
+        # Tokenize the input text and truncate to max_length
+        encoding = self.tokenizer(
+            input_text,
+            padding='max_length',
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors='pt'
+        )
+        
+        # Get the label index (which choice is correct)
+        label = self.choices.index(answer)
+        
+        # Convert to tensors
+        return {
+            'input_ids': encoding['input_ids'].squeeze(),  # Remove the batch dimension
+            'attention_mask': encoding['attention_mask'].squeeze(),
+            'labels': torch.tensor(label)
+        }
+
+
