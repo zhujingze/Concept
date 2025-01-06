@@ -1,0 +1,74 @@
+import torch
+import torch.nn as nn
+from transformers import LlamaForCausalLM
+
+class LlamaWithLayerWeights(LlamaForCausalLM):
+    def __init__(self, config):
+        super(LlamaWithLayerWeights, self).__init__(config)
+        
+        # 定义一个32维的可训练参数，表示每一层的权重
+        self.layer_weights = nn.Parameter(torch.ones(config.num_hidden_layers))  # 初始化为1，可以根据需求调整
+
+    def forward(self, input_ids, attention_mask=None, **kwargs):
+        # 获取原始的模型输出
+        outputs = super().forward(input_ids=input_ids, attention_mask=attention_mask, **kwargs)
+        
+        # 获取每一层的隐藏状态
+        hidden_states = outputs.last_hidden_state
+
+        # 将layer_weights与每一层的输出进行加权
+        # hidden_states: shape [batch_size, seq_length, hidden_size]
+        # self.layer_weights: shape [num_layers]
+        
+        # 逐层乘以相应的权重
+        for layer_idx in range(len(self.layer_weights)):
+            # 对应的层权重
+            weight = self.layer_weights[layer_idx]
+            # 对应层的输出乘以该权重
+            hidden_states[:, :, layer_idx] *= weight  # 你可以根据需求调整操作（比如加权求和或其他操作）
+        
+        # 返回修改后的隐藏状态
+        return hidden_states
+
+for param in model.parameters():
+    param.requires_grad = False  # 冻结所有参数
+
+# 只解冻layer_weights
+model.layer_weights.requires_grad = True
+
+from torch.optim import AdamW
+
+optimizer = AdamW(model.layer_weights.parameters(), lr=1e-5)  # 只训练layer_weights
+
+###一些设置限制
+self.layer_weights = nn.Parameter(torch.randn(config.num_hidden_layers))  # 随机初始化
+self.layer_weights = nn.Parameter(torch.abs(torch.randn(config.num_hidden_layers)))  # 只允许正权重
+
+from torch.utils.data import DataLoader
+from torch.optim import AdamW
+
+# 假设你有一个数据集
+train_dataloader = DataLoader(train_dataset, batch_size=8)
+
+optimizer = AdamW(model.parameters(), lr=1e-5)
+
+for epoch in range(num_epochs):
+    model.train()
+    
+    for batch in train_dataloader:
+        optimizer.zero_grad()
+        input_ids = batch["input_ids"]
+        attention_mask = batch["attention_mask"]
+
+        # 前向传播
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        loss = compute_loss(outputs, batch)  # 根据需要定义损失函数
+        loss.backward()
+        
+        # 查看训练中每一步的layer_weights
+        print(f"Epoch {epoch+1}, Batch Loss: {loss.item()}")
+        print("Layer Weights:", model.layer_weights.data)  # 打印当前的layer_weights值
+        
+        optimizer.step()
+
+    print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data)
