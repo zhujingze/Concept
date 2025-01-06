@@ -165,4 +165,19 @@ class MultipleChoiceDataset(Dataset):
             'labels': torch.tensor(label)
         }
 
+<s>
+<<SYS>>
+You are a helpful assistant that answers multiple-choice questions accurately.
+</SYS>
+
+[INST] Please answer the following multiple-choice question. [/INST]
+
+Question: What is the capital of France?  
+A. Berlin  
+B. Paris  
+C. Madrid  
+D. Rome  
+
+Answer: 
+</s>
 
