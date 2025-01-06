@@ -1,34 +1,83 @@
 import torch
 import torch.nn as nn
-from transformers import LlamaForCausalLM
+from transformers import LlamaForCausalLM, LlamaModel, CausalLMOutputWithPast
 
 class LlamaWithLayerWeights(LlamaForCausalLM):
     def __init__(self, config):
         super(LlamaWithLayerWeights, self).__init__(config)
         
         # 定义一个32维的可训练参数，表示每一层的权重
-        self.layer_weights = nn.Parameter(torch.ones(config.num_hidden_layers))  # 初始化为1，可以根据需求调整
+        self.layer_weights = nn.Parameter(torch.ones(config.num_hidden_layers))  # 初始化为1，或者使用其他方式初始化
+        
+        # 如果有其他初始化需求，可以在这里进行处理
+        self.post_init()
 
-    def forward(self, input_ids, attention_mask=None, **kwargs):
-        # 获取原始的模型输出
-        outputs = super().forward(input_ids=input_ids, attention_mask=attention_mask, **kwargs)
-        
-        # 获取每一层的隐藏状态
-        hidden_states = outputs.last_hidden_state
+    def forward(
+        self,
+        input_ids: torch.LongTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[Union[Cache, List[torch.FloatTensor]]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        cache_position: Optional[torch.LongTensor] = None,
+        num_logits_to_keep: int = 0,
+        **kwargs: Unpack[KwargsForCausalLM],
+    ) -> Union[Tuple, CausalLMOutputWithPast]:
+        # 默认值设置
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        # 将layer_weights与每一层的输出进行加权
-        # hidden_states: shape [batch_size, seq_length, hidden_size]
-        # self.layer_weights: shape [num_layers]
-        
-        # 逐层乘以相应的权重
-        for layer_idx in range(len(self.layer_weights)):
-            # 对应的层权重
-            weight = self.layer_weights[layer_idx]
-            # 对应层的输出乘以该权重
-            hidden_states[:, :, layer_idx] *= weight  # 你可以根据需求调整操作（比如加权求和或其他操作）
-        
-        # 返回修改后的隐藏状态
-        return hidden_states
+        # 调用原始的 LlamaModel 获取隐藏状态（hidden_states）
+        outputs = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=True,  # 获取所有层的 hidden states
+            return_dict=return_dict,
+            cache_position=cache_position,
+            **kwargs,
+        )
+
+        # 获取每一层的 hidden states
+        hidden_states = outputs.hidden_states  # 这里是一个list，包含所有层的hidden states
+
+        # 加权求和所有层的 hidden states
+        weighted_hidden_states = torch.zeros_like(hidden_states[0])  # 初始化为与第一层一样的形状
+
+        for layer_idx in range(len(hidden_states)):  # 对每一层的 hidden_states 加权
+            weight = self.layer_weights[layer_idx]  # 获取当前层的权重
+            weighted_hidden_states += hidden_states[layer_idx] * weight  # 将加权后的 hidden_states 累加
+
+        # 使用 lm_head 计算最终的 logits
+        logits = self.lm_head(weighted_hidden_states[:, -num_logits_to_keep:, :])
+
+        # 如果 labels 给定，计算损失
+        loss = None
+        if labels is not None:
+            loss = self.loss_function(logits=logits, labels=labels, vocab_size=self.config.vocab_size, **kwargs)
+
+        if not return_dict:
+            output = (logits,) + outputs[1:]
+            return (loss,) + output if loss is not None else output
+
+        return CausalLMOutputWithPast(
+            loss=loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
+
 
 for param in model.parameters():
     param.requires_grad = False  # 冻结所有参数
