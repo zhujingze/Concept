@@ -35,7 +35,7 @@ def main(args):
     model.layer_weights.requires_grad = True
     
     from torch.optim import AdamW
-    optimizer = AdamW([model.layer_weights], lr=args.lr):
+    optimizer = AdamW([model.layer_weights], lr=args.lr)
     
     if args.save_folder:
         os.makedirs(save_dir, exist_ok=True)
