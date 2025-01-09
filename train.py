@@ -15,7 +15,7 @@ def compute_loss(logits, labels):
 def main(args):
     device = args.device
     tokenizer = AutoTokenizer.from_pretrained(args.model)
-    model = LlamaWithLayerWeights.from_pretrained(args.model)
+    model = LlamaWithLayerWeights.from_pretrained(args.model).to(device)
 
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
