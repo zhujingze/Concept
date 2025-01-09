@@ -58,7 +58,7 @@ def main(args):
           out_idxs = torch.tensor(out_idxs, device = args.device)
           out_idxs = out_idxs.unsqueeze(1)
           
-          logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1).long())
+          logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1).long()))
           logits = logits[:, [319, 350, 315, 360]]
           logits = logits.to(args.device)
           loss = compute_loss(logits, label)
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     parser.add_argument('--data_folder', type=str)
     parser.add_argument('--subject', type=str)
     parser.add_argument('--bs', type=int)
-    parser.add_argument('--lr', type=float')
+    parser.add_argument('--lr', type=float)
     parser.add_argument('--epoch', type=int)
     parser.add_argument('--save_folder', type=str)
     
