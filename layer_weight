@@ -51,8 +51,8 @@ class LlamaWithLayerWeights(LlamaForCausalLM):
         # 获取每一层的 hidden states
         hidden_states_all = outputs.hidden_states
         # 限制大小在[0,1]并转换为和为1的权重
-        constrained_layer_weights = torch.clamp(self.layer_weights, min=0.0, max=1.0)
-        constrained_layer_weights = constrained_layer_weights / constrained_layer_weights.abs().sum()
+        # constrained_layer_weights = torch.clamp(self.layer_weights, min=0.0, max=1.0)
+        # constrained_layer_weights = constrained_layer_weights / constrained_layer_weights.abs().sum()
         # 去除输入embedding
         hidden_states_out=hidden_states_all[1:]
         weighted_hidden_states = torch.zeros_like(hidden_states_out[0])
@@ -60,7 +60,7 @@ class LlamaWithLayerWeights(LlamaForCausalLM):
         logits = torch.zeros(weighted_hidden_states.size(0), weighted_hidden_states.size(1), self.config.vocab_size, device=device)
 
         for layer_idx in range(len(hidden_states_out)):
-            weight = constrained_layer_weights[layer_idx]
+            weight = self.layer_weights[layer_idx]
             layer_logits = self.lm_head(hidden_states_out[layer_idx]) * weight
             logits += layer_logits
 
