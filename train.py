@@ -58,7 +58,7 @@ def main(args):
             out_idxs = torch.tensor(out_idxs, device = device)
             out_idxs = out_idxs.unsqueeze(1)
               
-            logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1).long()))
+            logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
             logits = logits.squeeze(1)
             logits = logits[:, [319, 350, 315, 360]]
             logits = logits.to(device)
