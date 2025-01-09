@@ -35,7 +35,7 @@ class MultipleChoiceDataset(Dataset):
         prompt_text = "Choose the right answer from options the answer should be one of A, B, C, D.\n"
         prompt_text += self.get_example()
 
-        input_text += "<question>:\n"
+        input_text = "<question>:\n"
         input_text += f"{question}\n"
         input_text += "<options>:\n"
         for i, choice in enumerate(choices):
