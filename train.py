@@ -21,10 +21,10 @@ def main(args):
         tokenizer.pad_token = tokenizer.eos_token
   
     test_filename = args.subject + '_test.csv'
-    vale_filename = args.subject + '_val.csv'
+    val_filename = args.subject + '_val.csv'
     
-    test_file = os.path.join(os.path.join(data_folder, 'test'), test_filename)
-    val_file = os.path.join(os.path.join(data_folder, 'val'), val_filename)
+    test_file = os.path.join(os.path.join(args.data_folder, 'test'), test_filename)
+    val_file = os.path.join(os.path.join(args.data_folder, 'val'), val_filename)
     
     dataset = MultipleChoiceDataset(test_file, val_file, tokenizer)
     train_loader = DataLoader(dataset, batch_size = args.bs, shuffle = True)
