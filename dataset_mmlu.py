@@ -43,7 +43,13 @@ class MultipleChoiceDataset(Dataset):
         input_text += "<answer>: \n"
         input_text = prompt_text + input_text
 
-        encodings = self.tokenizer(input_text, return_tensors='pt')
+        encodings = self.tokenizer(
+            input_text,
+            padding = "max_length",
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors='pt
+        )
         label = self.choices.index(answer)
         
         return {
