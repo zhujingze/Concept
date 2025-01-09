@@ -11,6 +11,9 @@ def main(args):
     device = args.device
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     model = LlamaWithLayerWeights.from_pretrained(args.model)
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
   
     test_filename = args.subject + '_test.csv'
     vale_filename = args.subject + '_val.csv'
