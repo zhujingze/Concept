@@ -55,12 +55,12 @@ def main(args):
     
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         
-            out_idxs = torch.tensor(out_idxs, device = args.device)
+            out_idxs = torch.tensor(out_idxs, device = device)
             out_idxs = out_idxs.unsqueeze(1)
               
             logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1).long()))
             logits = logits[:, [319, 350, 315, 360]]
-            logits = logits.to(args.device)
+            logits = logits.to(device)
             loss = compute_loss(logits, label)
             loss.backward()
     
