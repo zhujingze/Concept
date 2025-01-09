@@ -71,8 +71,9 @@ def main(args):
             
         if args.save_folder:
             torch.save(model.layer_weights.data, os.path.join(args.save_floder, f"{args.subject}_epoch{epoch+1}.pth"))
-        model.layer_weights.data = torch.clamp(model.layer_weights.data, min=0.0, max=1.0)
-        print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data / model.layer_weights.data.sun())
+        print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data)
+        # model.layer_weights.data = torch.clamp(model.layer_weights.data, min=0.0, max=1.0)
+        # print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data / model.layer_weights.data.sun())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
