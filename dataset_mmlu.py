@@ -48,7 +48,7 @@ class MultipleChoiceDataset(Dataset):
             padding = "max_length",
             truncation=True,
             max_length=self.max_length,
-            return_tensors='pt
+            return_tensors='pt'
         )
         label = self.choices.index(answer)
         
