@@ -48,10 +48,19 @@ def main(args):
           attention_mask = batch["attention_mask"].to(device)
           label = batch["label"].to(device)
 
+          out_idxs = []
+          for i in range(args.bs):
+              out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
+              out_idxs.append(out_idx)
+
           outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-          logits = outputs.logits[:,-1,:]
+
+          out_idxs = torch.tensor(out_idxs, device = args.device)
+          out_idxs = out_idxs.unsqueeze(1)
+          
+          logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1).long())
           logits = logits[:, [319, 350, 315, 360]]
-          logits = logits.to(device)
+          logits = logits.to(args.device)
           loss = compute_loss(logits, label)
           loss.backward()
 
