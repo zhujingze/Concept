@@ -49,7 +49,7 @@ def main(args):
             label = batch["label"].to(device)
 
             out_idxs = []
-            for i in range(args.bs):
+            for i in range(attention_mask.size(0)):
                 out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
                 out_idxs.append(out_idx)
     
@@ -71,7 +71,8 @@ def main(args):
             
         if args.save_folder:
             torch.save(model.layer_weights.data, os.path.join(args.save_floder, f"{args.subject}_epoch{epoch+1}.pth"))
-        print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data)
+        model.layer_weights.data = torch.clamp(model.layer_weights.data, min=0.0, max=1.0)
+        print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data / model.layer_weights.data.sun())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
