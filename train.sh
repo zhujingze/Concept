@@ -5,5 +5,5 @@ CUDA_VISIBLE_DEVICES=7 python train.py \
     --subject 'global_facts' \
     --bs 4 \
     --lr 1e-3 \
-    --epoch  20\
-    --save_folder  "layer_weight"\
+    --epoch 20\
+    --save_folder "layer_weight"\
