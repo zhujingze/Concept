@@ -48,11 +48,11 @@ def main(args):
             attention_mask = batch["attention_mask"].to(device)
             label = batch["label"].to(device)
 
-        out_idxs = []
-        for i in range(args.bs):
-            out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
-            out_idxs.append(out_idx)
-
+            out_idxs = []
+            for i in range(args.bs):
+                out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
+                out_idxs.append(out_idx)
+    
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         
             out_idxs = torch.tensor(out_idxs, device = args.device)
