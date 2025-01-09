@@ -42,7 +42,7 @@ def main(args):
 
     for epoch in range(args.epoch):
         model.train()
-        for batch in train_dataloader:
+        for batch in train_loader:
             optimizer.zero_grad()
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
