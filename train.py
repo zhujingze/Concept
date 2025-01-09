@@ -73,7 +73,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    # 添加参数
+
     parser.add_argument('--model', type=str)
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--data_folder', type=str)
@@ -83,6 +83,5 @@ if __name__ == "__main__":
     parser.add_argument('--epoch', type=int)
     parser.add_argument('--save_folder', type=str)
     
-    # 解析命令行参数
     args = parser.parse_args()
     main(args)
