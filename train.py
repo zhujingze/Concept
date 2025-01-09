@@ -38,7 +38,7 @@ def main(args):
     optimizer = AdamW([model.layer_weights], lr=args.lr)
     
     if args.save_folder:
-        os.makedirs(save_dir, exist_ok=True)
+        os.makedirs(save_folder, exist_ok=True)
 
     for epoch in range(args.epoch):
         model.train()
