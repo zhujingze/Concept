@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 import os
 
 def compute_loss(logits, labels):
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.NLLLoss()
     loss = criterion(logits, labels)
     return loss
 
