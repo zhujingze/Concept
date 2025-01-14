@@ -32,7 +32,7 @@ class MultipleChoiceDataset(Dataset):
         question = self.data.iloc[idx, 0]
         choices = [self.data.iloc[idx, i+1] for i in range(4)]
         answer = self.data.iloc[idx, 5]
-        prompt_text = f"The following are multiple choice questions (with answers) about {subject}.\n\n"
+        prompt_text = f"The following are multiple choice questions (with answers) about {self.subject}.\n\n"
         prompt_text += self.get_example()
 
         #input_text = "<question>:\n"
