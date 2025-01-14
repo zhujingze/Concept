@@ -26,7 +26,7 @@ def main(args):
     test_file = os.path.join(os.path.join(args.data_folder, 'test'), test_filename)
     val_file = os.path.join(os.path.join(args.data_folder, 'val'), val_filename)
     
-    dataset = MultipleChoiceDataset(test_file, val_file, tokenizer)
+    dataset = MultipleChoiceDataset(args.subject, test_file, val_file, tokenizer)
     train_loader = DataLoader(dataset, batch_size = args.bs, shuffle = True)
 
     for param in model.parameters():
