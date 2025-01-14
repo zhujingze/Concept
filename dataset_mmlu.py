@@ -25,7 +25,7 @@ class MultipleChoiceDataset(Dataset):
             #example_text += "<options>:\n"
             for i, choice in enumerate(choices):
                 example_text += f"{self.choices[i]}. {choice}\n"
-            example_text += "Answer: "
+            example_text += "Answer:"
             example_text += f"{answer}\n\n"
         return example_text
 
@@ -41,7 +41,7 @@ class MultipleChoiceDataset(Dataset):
         #input_text += "<options>:\n"
         for i, choice in enumerate(choices):
             input_text += f"{self.choices[i]}. {choice}\n"
-        input_text += "Answer: \n"
+        input_text += "Answer:"
         input_text = prompt_text + input_text
 
         encodings = self.tokenizer(
