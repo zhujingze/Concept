@@ -25,7 +25,7 @@ class MultipleChoiceDataset(Dataset):
             #example_text += "<options>:\n"
             for i, choice in enumerate(choices):
                 example_text += f"{self.choices[i]}. {choice}\n"
-            example_text += "Answer:"
+            example_text += "Answer: "
             example_text += f"{answer}\n\n"
         return example_text
 
