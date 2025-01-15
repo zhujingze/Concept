@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
 from transformers import LlamaForCausalLM, LlamaModel, CausalLMOutputWithPast
+import numpy as np
 
-def get_relative_top_filter(self, scores: torch.FloatTensor, relative_top: float = 0.1, min_tokens_to_keep: int = 1):
+def get_relative_top_filter(self, scores: torch.FloatTensor, relative_top, min_tokens_to_keep: int = 1):
     scores_normalized = scores.log_softmax(dim=-1) 
     sorted_logits, sorted_indices = torch.sort(scores_normalized, descending=True)
     min_thresh = sorted_logits[..., min_tokens_to_keep-1] 
@@ -37,11 +38,13 @@ class LlamaWithLayerWeights(LlamaForCausalLM):
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
         relative_top: Optional[float] = None,
+        relative_top_value: Optional[float] = None,
         num_logits_to_keep: int = 0,
         **kwargs: Unpack[KwargsForCausalLM],
     ) -> Union[Tuple, CausalLMOutputWithPast]:
 
         relative_top = relative_top if relative_top is not None else 0.0
+        relative_top_value = relative_top_value if relative_top_value is not None else -1000.0
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -59,6 +62,8 @@ class LlamaWithLayerWeights(LlamaForCausalLM):
             cache_position=cache_position,
             **kwargs,
         )
+        hidden_states_last = output[0]
+        logits_last = self.lm_head(hidden_states_last[:, -num_logits_to_keep:, :])
 
         # 获取每一层的 hidden states
         hidden_states_all = outputs.hidden_states
@@ -77,6 +82,10 @@ class LlamaWithLayerWeights(LlamaForCausalLM):
             layer_logits = layer_logits.log_softmax(dim=-1)
             logits += layer_logits
         logits = logits.log_softmax(dim=-1)
+
+        if relative_top > 0.0:
+            relative_top_mask = self.get_relative_top_filter(logits_last, relative_top)
+            diff_logits = torch.where(relative_top_mask, relative_top_value, logits)
 
         loss = None
         if labels is not None:
