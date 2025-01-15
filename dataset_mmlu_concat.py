@@ -48,11 +48,11 @@ class MultipleChoiceDataset(Dataset):
             answer_text.append(f"{self.choices[i]}. {choice}\n")
         input_text += "Answer: "
         input_text = prompt_text + input_text
-        prefix = self.tokenizer(input_text, return_tensors='pt')
         
         for i in range(len(choices)):
             final_text.append(input_text + answer_text[i])
-            
+
+        prefix_encoding = self.tokenizer(input_text, return_tensors='pt')
         encodings = self.tokenizer(
             final_text,
             padding = "max_length",
@@ -63,7 +63,8 @@ class MultipleChoiceDataset(Dataset):
         label = self.choices.index(answer)
         
         return {
-            "input_ids": encodings["input_ids"].squeeze(),
-            "attention_mask": encodings["attention_mask"].squeeze(),
+            "input_ids": encodings["input_ids"],
+            "attention_mask": encodings["attention_mask"],
+            "prefix_ids": prefix_encoding["input_ids"]
             "label": torch.tensor(label)
         }
