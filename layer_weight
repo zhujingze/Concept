@@ -43,7 +43,7 @@ class LlamaWithLayerWeights(LlamaForCausalLM):
         **kwargs: Unpack[KwargsForCausalLM],
     ) -> Union[Tuple, CausalLMOutputWithPast]:
 
-        relative_top = relative_top if relative_top is not None else 0.0
+        relative_top = relative_top if relative_top is not None else 0.1
         relative_top_value = relative_top_value if relative_top_value is not None else -1000.0
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
