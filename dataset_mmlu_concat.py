@@ -25,8 +25,11 @@ class MultipleChoiceDataset(Dataset):
             #example_text += "<options>:\n"
             for i, choice in enumerate(choices):
                 example_text += f"{self.choices[i]}. {choice}\n"
-            example_text += "Answer:"
-            example_text += f"{answer}\n\n"
+
+            correct_choice_idx = self.choices.index(answer)
+            correct_answer_text = choices[correct_choice_idx]
+            example_text += f"Answer: {self.choices[correct_choice_idx]}. {correct_answer_text}\n\n"
+
         return example_text
 
     def __getitem__(self, idx):
@@ -35,17 +38,23 @@ class MultipleChoiceDataset(Dataset):
         answer = self.data.iloc[idx, 5]
         prompt_text = f"The following are multiple choice questions (with answers) about {self.subject}.\n\n"
         prompt_text += self.get_example()
-
+        answer_text = []
+        final_text = []
         #input_text = "<question>:\n"
         input_text = f"{question}\n"
         #input_text += "<options>:\n"
         for i, choice in enumerate(choices):
             input_text += f"{self.choices[i]}. {choice}\n"
-        input_text += "Answer:"
+            answer_text.append(f"{self.choices[i]}. {choice}\n")
+        input_text += "Answer: "
         input_text = prompt_text + input_text
-
+        prefix = self.tokenizer(input_text, return_tensors='pt')
+        
+        for i in range(len(choices)):
+            final_text.append(input_text + answer_text[i])
+            
         encodings = self.tokenizer(
-            input_text,
+            final_text,
             padding = "max_length",
             truncation=True,
             max_length=self.max_length,
