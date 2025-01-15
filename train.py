@@ -42,38 +42,65 @@ def main(args):
 
     for epoch in range(args.epoch):
         model.train()
-        for batch in train_loader:
-            optimizer.zero_grad()
-            input_ids = batch["input_ids"].to(device)
-            attention_mask = batch["attention_mask"].to(device)
-            label = batch["label"].to(device)
-
-            out_idxs = []
-            for i in range(attention_mask.size(0)):
-                out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
-                out_idxs.append(out_idx)
+        if args.method == 'letter':
+            for batch in train_loader:
+                optimizer.zero_grad()
+                input_ids = batch["input_ids"].to(device)
+                attention_mask = batch["attention_mask"].to(device)
+                label = batch["label"].to(device)
     
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                out_idxs = []
+                for i in range(attention_mask.size(0)):
+                    out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
+                    out_idxs.append(out_idx)
         
-            out_idxs = torch.tensor(out_idxs, device = device)
-            out_idxs = out_idxs.unsqueeze(1)
-              
-            logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
-            logits = logits.squeeze(1)
-            logits = logits[:, [319, 350, 315, 360]]
-            logits = logits.to(device)
-            loss = compute_loss(logits, label)
-            loss.backward()
-    
-            print(f"Epoch {epoch+1}, Batch Loss: {loss.item()}")
-    
-            optimizer.step()
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
             
-        if args.save_folder:
-            torch.save(model.layer_weights.data, os.path.join(args.save_floder, f"{args.subject}_epoch{epoch+1}.pth"))
-        print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data)
-        # model.layer_weights.data = torch.clamp(model.layer_weights.data, min=0.0, max=1.0)
-        # print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data / model.layer_weights.data.sun())
+                out_idxs = torch.tensor(out_idxs, device = device)
+                out_idxs = out_idxs.unsqueeze(1)
+                  
+                logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
+                logits = logits.squeeze(1)
+                logits = logits[:, [319, 350, 315, 360]]
+                logits = logits.to(device)
+                loss = compute_loss(logits, label)
+                loss.backward()
+        
+                print(f"Epoch {epoch+1}, Batch Loss: {loss.item()}")
+        
+                optimizer.step()
+                
+            if args.save_folder:
+                torch.save(model.layer_weights.data, os.path.join(args.save_floder, f"{args.subject}_epoch{epoch+1}.pth"))
+            print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data)
+            # model.layer_weights.data = torch.clamp(model.layer_weights.data, min=0.0, max=1.0)
+            # print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data / model.layer_weights.data.sun())
+        if args.method == 'concat':
+            for batch in train_loader:
+                optimizer.zero_grad()
+                input_ids = batch["input_ids"].to(device)
+                attention_mask = batch["attention_mask"].to(device)
+                label = batch["label"].to(device)
+
+                for i in range(attention_mask.sieze(0)):
+                    for j in range(4):
+                        input_ids = input_ids[i][j]
+                        attention_mask = attention_mask[i][j]
+                        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+
+                out_idxs = torch.tensor(out_idxs, device = device)
+                out_idxs = out_idxs.unsqueeze(1)
+                  
+                logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
+                logits = logits.squeeze(1)
+                logits = logits[:, [319, 350, 315, 360]]
+                logits = logits.to(device)
+                loss = compute_loss(logits, label)
+                loss.backward()
+        
+                print(f"Epoch {epoch+1}, Batch Loss: {loss.item()}")
+        
+                optimizer.step()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -87,6 +114,7 @@ if __name__ == "__main__":
     parser.add_argument('--epoch', type=int)
     parser.add_argument('--save_folder', type=str)
     parser.add_argument('--relative_top', type=float)
+    parser.add_argument('--method', type=float)
     
     args = parser.parse_args()
     main(args)
