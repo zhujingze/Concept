@@ -65,6 +65,6 @@ class MultipleChoiceDataset(Dataset):
         return {
             "input_ids": encodings["input_ids"],
             "attention_mask": encodings["attention_mask"],
-            "prefix_ids": prefix_encoding["input_ids"]
+            "prefix_ids_len": len(prefix_encoding["input_ids"][0]),
             "label": torch.tensor(label)
         }
