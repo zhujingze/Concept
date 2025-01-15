@@ -3,16 +3,6 @@ import torch.nn as nn
 from transformers import LlamaForCausalLM, LlamaModel, CausalLMOutputWithPast
 import numpy as np
 
-def get_relative_top_filter(self, scores: torch.FloatTensor, relative_top, min_tokens_to_keep: int = 1):
-    scores_normalized = scores.log_softmax(dim=-1) 
-    sorted_logits, sorted_indices = torch.sort(scores_normalized, descending=True)
-    min_thresh = sorted_logits[..., min_tokens_to_keep-1] 
-    probs_max = torch.max(scores_normalized, dim=-1).values
-    probs_thresh = probs_max + np.log(relative_top)
-    probs_thresh = torch.min(min_thresh, probs_thresh)
-    probs_thresh = probs_thresh.unsqueeze(-1)
-    return scores_normalized < probs_thresh
-
 class LlamaWithLayerWeights(LlamaForCausalLM):
     def __init__(self, config):
         super(LlamaWithLayerWeights, self).__init__(config)
@@ -23,6 +13,16 @@ class LlamaWithLayerWeights(LlamaForCausalLM):
         self.layer_weights = nn.Parameter(layer_weights_init)  # 最后一层权重初始化为1，其余为0
         
         self.post_init()
+
+    def get_relative_top_filter(self, scores: torch.FloatTensor, relative_top, min_tokens_to_keep: int = 1):
+        scores_normalized = scores.log_softmax(dim=-1) 
+        sorted_logits, sorted_indices = torch.sort(scores_normalized, descending=True)
+        min_thresh = sorted_logits[..., min_tokens_to_keep-1] 
+        probs_max = torch.max(scores_normalized, dim=-1).values
+        probs_thresh = probs_max + np.log(relative_top)
+        probs_thresh = torch.min(min_thresh, probs_thresh)
+        probs_thresh = probs_thresh.unsqueeze(-1)
+        return scores_normalized < probs_thresh
 
     def forward(
         self,
