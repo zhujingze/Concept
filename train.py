@@ -138,7 +138,7 @@ if __name__ == "__main__":
     parser.add_argument('--epoch', type=int)
     parser.add_argument('--save_folder', type=str)
     parser.add_argument('--relative_top', type=float)
-    parser.add_argument('--method', type=float)
+    parser.add_argument('--method', type=str)
     
     args = parser.parse_args()
     main(args)
