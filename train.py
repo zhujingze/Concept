@@ -90,7 +90,7 @@ def main(args):
 
                 # batch
                 all_batch = []
-                for i in range(attention_mask.sieze(0)):
+                for i in range(attention_mask.size(0)):
                     input_ids_sample = input_ids[i]
                     attention_mask_sample = attention_mask[i]
                     prefix_len = prefix_ids_len[i]
