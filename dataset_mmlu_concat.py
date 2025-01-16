@@ -2,7 +2,7 @@ from torch.utils.data import Dataset
 import pandas as pd
 import torch
 
-class MultipleChoiceDataset(Dataset):
+class MultipleChoiceConcatDataset(Dataset):
     def __init__(self, subject, csv_file, example_file, tokenizer, max_length=1024):
         self.data = pd.read_csv(csv_file, header=None)
         self.example_data = pd.read_csv(example_file, header=None)
