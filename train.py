@@ -119,7 +119,7 @@ def main(args):
                 total_correct += (batch_accuracy * label.size(0))
                 total_samples += label.size(0)
         
-        if args.method == 'concat' or 'concat_wo_option':
+        if args.method in ['concat', 'concat_wo_option']:
             for batch in train_loader:
                 optimizer.zero_grad()
                 input_ids = batch["input_ids"].to(device)
