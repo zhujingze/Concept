@@ -9,6 +9,7 @@ class MultipleChoiceConcatDataset(Dataset):
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.subject = subject
+        self.choices = ["A", "B", "C", "D"]
 
     def __len__(self):
         return len(self.data)
