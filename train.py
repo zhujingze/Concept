@@ -114,10 +114,12 @@ def main(args):
                         idx_range = torch.arange(num).unsqueeze(0).expand(1, num).to(device)
                         start_idx_tensor = start_idx.clone().unsqueeze(0).expand(1, num) - 2
                         final_idx = start_idx_tensor + idx_range
+                        
                         logits_selected = outputs.logits[j][final_idx]
                         real_answer_ids[j] = real_answer_ids[j].unsqueeze(0)
                         logits_selected = logits_selected[0, torch.arange(num), real_answer_ids[j].squeeze(0)]
-                        logits_selected = logits_selected.sum() / num
+                        logits_selected = logits_selected.sum()
+                        # logits_selected = logits_selected.sum() / num
                         one_batch.append(logits_selected)
                     one_batch = torch.stack(one_batch)
                     all_batch.append(one_batch)
