@@ -130,7 +130,58 @@ def main(args):
             if args.save_folder:
                 torch.save(model.layer_weights.data, os.path.join(args.save_floder, f"{args.subject}_epoch{epoch+1}.pth"))
             print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data)
+            
+        if args.method == 'concat_wo_option':
+            for batch in train_loader:
+                optimizer.zero_grad()
+                input_ids = batch["input_ids"].to(device)
+                prefix_ids_len = batch["prefix_ids_len"].to(device)
+                attention_mask = batch["attention_mask"].to(device)
+                label = batch["label"].to(device)
 
+                # batch
+                all_batch = []
+                for i in range(attention_mask.size(0)):
+                    input_ids_sample = input_ids[i]
+                    attention_mask_sample = attention_mask[i]
+                    prefix_len = prefix_ids_len[i]
+                    answer_ids = input_ids_sample[:, prefix_len-1:]
+                    real_answer_ids = []
+                    for row in answer_ids:
+                        idx = (row != 2).nonzero(as_tuple=True)[0].max().item()
+                        row = row[:idx+1]
+                        real_answer_ids.append(row)
+
+                    outputs = model(input_ids=input_ids_sample, attention_mask=attention_mask_sample)
+
+                    # option
+                    one_batch = []
+                    for j in range(attention_mask_sample.size(0)):
+                        num = len(real_answer_ids[j])
+                        start_idx = prefix_ids_len[i].to(device)
+                        idx_range = torch.arange(num).unsqueeze(0).expand(1, num).to(device)
+                        start_idx_tensor = start_idx.clone().unsqueeze(0).expand(1, num) - 1
+                        final_idx = start_idx_tensor + idx_range
+                        logits_selected = outputs.logits[j][final_idx]
+                        real_answer_ids[j] = real_answer_ids[j].unsqueeze(0)
+                        logits_selected = logits_selected[0, torch.arange(num), real_answer_ids[j].squeeze(0)]
+                        logits_selected = logits_selected.sum() / num
+                        one_batch.append(logits_selected)
+                    one_batch = torch.stack(one_batch)
+                    all_batch.append(one_batch)
+                all_batch = torch.stack(all_batch, dim=0)
+                logits = all_batch.to(device)
+                loss = compute_loss(logits, label)
+                loss.backward()
+        
+                print(f"Epoch {epoch+1}, Batch Loss: {loss.item()}")
+        
+                optimizer.step()
+                
+            if args.save_folder:
+                torch.save(model.layer_weights.data, os.path.join(args.save_floder, f"{args.subject}_epoch{epoch+1}.pth"))
+            print(f"End of Epoch {epoch+1}, Layer Weights:", model.layer_weights.data)
+            
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
