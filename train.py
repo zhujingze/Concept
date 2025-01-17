@@ -5,6 +5,7 @@ from transformers import AutoTokenizer
 from transformers.models.llama.modeling_llama import LlamaWithLayerWeights
 from dataset_mmlu import MultipleChoiceDataset
 from dataset_mmlu_concat import MultipleChoiceConcatDataset
+from dataset_mmlu_wo_option import MultipleChoiceConcatWODataset
 from torch.utils.data import DataLoader
 import os
 
@@ -29,8 +30,10 @@ def main(args):
 
     if args.method == 'letter':
         dataset = MultipleChoiceDataset(args.subject, test_file, val_file, tokenizer)
-    else if args.method == 'concat':
+    if args.method == 'concat':
         dataset = MultipleChoiceConcatDataset(args.subject, test_file, val_file, tokenizer)
+    if args.method == 'wo_option':
+        dataset = MultipleChoiceConcatWODataset(args.subject, test_file, val_file, tokenizer)
         
     train_loader = DataLoader(dataset, batch_size = args.bs, shuffle = True)
 
