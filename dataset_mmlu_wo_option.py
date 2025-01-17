@@ -8,44 +8,23 @@ class MultipleChoiceConcatDataset(Dataset):
         self.example_data = pd.read_csv(example_file, header=None)
         self.tokenizer = tokenizer
         self.max_length = max_length
-        self.choices = ["A", "B", "C", "D"]
         self.subject = subject
 
     def __len__(self):
         return len(self.data)
-
-    def get_example(self):
-        example_text = ''
-        for idx in range(5):
-            question = self.example_data.iloc[idx, 0]
-            choices = [self.example_data.iloc[idx, i+1] for i in range(4)]
-            answer = self.example_data.iloc[idx, 5]
-            #example_text += "<question>:\n"
-            example_text += f"{question}\n"
-            #example_text += "<options>:\n"
-            for i, choice in enumerate(choices):
-                example_text += f"{self.choices[i]}. {choice}\n"
-
-            correct_choice_idx = self.choices.index(answer)
-            correct_answer_text = choices[correct_choice_idx]
-            example_text += f"Answer: {self.choices[correct_choice_idx]}. {correct_answer_text}\n\n"
-
-        return example_text
 
     def __getitem__(self, idx):
         question = self.data.iloc[idx, 0]
         choices = [self.data.iloc[idx, i+1] for i in range(4)]
         answer = self.data.iloc[idx, 5]
         prompt_text = f"The following are multiple choice questions (with answers) about {self.subject}.\n\n"
-        prompt_text += self.get_example()
         answer_text = []
         final_text = []
         #input_text = "<question>:\n"
-        input_text = f"{question}\n"
+        input_text = f"Question: {question}\n"
         #input_text += "<options>:\n"
-        for i, choice in enumerate(choices):
-            input_text += f"{self.choices[i]}. {choice}\n"
-            answer_text.append(f"{self.choices[i]}. {choice}\n")
+        for choice in choices:
+            answer_text.append(f"{choice}")
         input_text += "Answer: "
         input_text = prompt_text + input_text
         
