@@ -8,7 +8,7 @@ from dataset_mmlu_concat import MultipleChoiceConcatDataset
 from dataset_mmlu_wo_option import MultipleChoiceConcatWODataset
 from torch.utils.data import DataLoader
 import os
-import tqdm
+from tqdm import tqdm
 
 def compute_loss(logits, labels):
     criterion = nn.NLLLoss()
