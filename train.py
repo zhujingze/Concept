@@ -59,7 +59,7 @@ def main(args):
     total_correct = 0
     total_correct_norm = 0
     total_samples = 0
-    if method == "letter":
+    if args.method == "letter":
         for batch in train_loader:
             optimizer.zero_grad()
             input_ids = batch["input_ids"].to(device)
