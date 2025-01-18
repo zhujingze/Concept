@@ -8,6 +8,7 @@ from dataset_mmlu_concat import MultipleChoiceConcatDataset
 from dataset_mmlu_wo_option import MultipleChoiceConcatWODataset
 from torch.utils.data import DataLoader
 import os
+import tqdm
 
 def compute_loss(logits, labels):
     criterion = nn.NLLLoss()
@@ -53,8 +54,103 @@ def main(args):
     
     if args.save_folder:
         os.makedirs(save_folder, exist_ok=True)
+        
+    # ori res
+    total_correct = 0
+    total_correct_norm = 0
+    total_samples = 0
+    if method == "letter":
+        for batch in train_loader:
+            optimizer.zero_grad()
+            input_ids = batch["input_ids"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
+            label = batch["label"].to(device)
 
-    for epoch in range(args.epoch):
+            out_idxs = []
+            for i in range(attention_mask.size(0)):
+                out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
+                out_idxs.append(out_idx)
+    
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        
+            out_idxs = torch.tensor(out_idxs, device = device)
+            out_idxs = out_idxs.unsqueeze(1)
+              
+            logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
+            logits = logits.squeeze(1)
+            logits = logits[:, [319, 350, 315, 360]]
+            logits = logits.to(device)
+            batch_accuracy = compute_accuracy(logits, label)
+            total_correct += (batch_accuracy * label.size(0))
+            total_samples += label.size(0)
+
+    if args.method in ['concat', 'concat_wo_option']:
+        for batch in train_loader:
+            optimizer.zero_grad()
+            input_ids = batch["input_ids"].to(device)
+            prefix_ids_len = batch["prefix_ids_len"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
+            label = batch["label"].to(device)
+
+            # batch
+            all_batch = []
+            all_batch_norm = []
+            for i in range(attention_mask.size(0)):
+                input_ids_sample = input_ids[i]
+                attention_mask_sample = attention_mask[i]
+                prefix_len = prefix_ids_len[i]
+                answer_ids = input_ids_sample[:, prefix_len-1:]
+                real_answer_ids = []
+                for row in answer_ids:
+                    idx = (row != 2).nonzero(as_tuple=True)[0].max().item()
+                    row = row[:idx+1]
+                    real_answer_ids.append(row)
+
+                outputs = model(input_ids=input_ids_sample, attention_mask=attention_mask_sample)
+
+                # option
+                one_batch = []
+                one_batch_norm = []
+                for j in range(attention_mask_sample.size(0)):
+                    num = len(real_answer_ids[j])
+                    start_idx = prefix_ids_len[i].to(device)
+                    idx_range = torch.arange(num).unsqueeze(0).expand(1, num).to(device)
+                    start_idx_tensor = start_idx.clone().unsqueeze(0).expand(1, num) - 2
+                    final_idx = start_idx_tensor + idx_range
+                    
+                    logits_selected = outputs.logits[j][final_idx]
+                    real_answer_ids[j] = real_answer_ids[j].unsqueeze(0)
+                    logits_selected = logits_selected[0, torch.arange(num), real_answer_ids[j].squeeze(0)]
+                    logits_selected = logits_selected.sum()
+                    logits_selected_norm = logits_selected.sum() / num
+                    
+                    one_batch.append(logits_selected)
+                    one_batch_norm.append(logits_selected_norm)
+                one_batch = torch.stack(one_batch)
+                one_batch_norm = torch.stack(one_batch_norm)
+                all_batch.append(one_batch)
+                all_batch_norm.append(one_batch_norm)
+            all_batch = torch.stack(all_batch, dim=0)
+            all_batch_norm = torch.stack(all_batch_norm, dim=0)
+            logits = all_batch.to(device)
+            logits_norm = all_batch_norm.to(device)
+
+            batch_accuracy = compute_accuracy(logits, label)
+            total_correct += (batch_accuracy * label.size(0))
+            total_samples += label.size(0)
+
+            batch_accuracy_norm = compute_accuracy(logits_norm, label)
+            total_correct_norm += (batch_accuracy_norm * label.size(0))
+
+    epoch_accuracy = total_correct / total_samples
+    print(f"Original Accuracy: {epoch_accuracy * 100:.2f}%")
+
+    if args.method == 'concat' or 'concat_wo_option':
+        epoch_accuracy_norm = total_correct_norm / total_samples
+        print(f"Original Accuracy_Norm: {epoch_accuracy_norm * 100:.2f}%")
+
+    # Train
+    for epoch in tqdm(range(args.epoch), desc="Training Epochs"):
         model.train()
         total_correct = 0
         total_correct_norm = 0
