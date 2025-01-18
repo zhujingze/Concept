@@ -37,8 +37,8 @@ def main(args):
 
     if args.method == 'letter':
         dataset = MultipleChoiceDataset(args.subject, test_file, val_file, tokenizer)
-    if args.method == 'concat':
-        dataset = MultipleChoiceConcatDataset(args.subject, test_file, val_file, tokenizer)
+    if args.method == '':
+        dataset = MultipleChoiceDataset(args.subject, test_file, val_file, tokenizer)
     if args.method == 'wo_option':
         dataset = MultipleChoiceConcatWODataset(args.subject, test_file, val_file, tokenizer)
         
@@ -84,7 +84,7 @@ def main(args):
             total_correct += (batch_accuracy * label.size(0))
             total_samples += label.size(0)
 
-    if args.method in ['concat', 'concat_wo_option']:
+    if args.method in ['concat', 'wo_option']:
         for batch in train_loader:
             optimizer.zero_grad()
             input_ids = batch["input_ids"].to(device)
@@ -145,7 +145,7 @@ def main(args):
     epoch_accuracy = total_correct / total_samples
     print(f"Original Accuracy: {epoch_accuracy * 100:.2f}%")
 
-    if args.method == 'concat' or 'concat_wo_option':
+    if args.method in ['concat', 'wo_option']:
         epoch_accuracy_norm = total_correct_norm / total_samples
         print(f"Original Accuracy_Norm: {epoch_accuracy_norm * 100:.2f}%")
 
@@ -215,7 +215,7 @@ def main(args):
                 total_correct += (batch_accuracy * label.size(0))
                 total_samples += label.size(0)
         
-        if args.method in ['concat', 'concat_wo_option']:
+        if args.method in ['concat', 'wo_option']:
             for batch in train_loader:
                 optimizer.zero_grad()
                 input_ids = batch["input_ids"].to(device)
@@ -328,7 +328,7 @@ def main(args):
         epoch_accuracy = total_correct / total_samples
         print(f"Epoch{epoch+1} Accuracy: {epoch_accuracy * 100:.2f}%")
 
-        if args.method == 'concat' or 'concat_wo_option':
+        if args.method in ['concat', 'wo_option']:
             epoch_accuracy_norm = total_correct_norm / total_samples
             print(f"Epoch{epoch+1} Accuracy_Norm: {epoch_accuracy_norm * 100:.2f}%")
             
