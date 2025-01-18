@@ -234,7 +234,7 @@ def main(args):
 
         if args.method == 'concat' or 'concat_wo_option':
             epoch_accuracy_norm = total_correct_norm / total_samples
-        print(f"Epoch{epoch+1} Accuracy_Norm: {epoch_accuracy_norm * 100:.2f}%")
+            print(f"Epoch{epoch+1} Accuracy_Norm: {epoch_accuracy_norm * 100:.2f}%")
             
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
