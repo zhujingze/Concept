@@ -78,8 +78,8 @@ class LlamaWithLayerWeights(LlamaForCausalLM):
 
         for layer_idx in range(len(hidden_states_out)):
             weight = self.layer_weights[layer_idx]
-            layer_logits = self.lm_head(hidden_states_out[layer_idx]) * weight
-            layer_logits = layer_logits.log_softmax(dim=-1)
+            layer_logits = self.lm_head(hidden_states_out[layer_idx]).log_softmax(dim=-1)
+            layer_logits = layer_logits * weight
             logits += layer_logits
         logits = logits.log_softmax(dim=-1)
 
