@@ -24,6 +24,9 @@ def extract_lines(input_file, output_file):
         
         i += 1  # 处理下一行
 
+    # 删除包含"prompt"的行
+    extracted_lines = [line for line in extracted_lines if "prompt" not in line.lower()]
+    
     # 将提取的内容保存到输出文件
     with open(output_file, 'w') as output:
         for line in extracted_lines:
