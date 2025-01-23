@@ -130,7 +130,7 @@ class Trainer:
     def _test(self, method):
         total_correct = 0
         total_samples = 0
-        for batch in self.train_loader:
+        for batch in self.train_data:
             optimizer.zero_grad()
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
