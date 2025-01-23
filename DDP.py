@@ -23,6 +23,17 @@ def ddp_setup():
     torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
     init_process_group(backend="nccl")
 
+def compute_loss(logits, labels):
+    criterion = nn.NLLLoss()
+    loss = criterion(logits, labels)
+    return loss
+
+def compute_accuracy(logits, labels):
+    _, predicted = torch.max(logits, 1)
+    correct = (predicted == labels).sum().item()
+    accuracy = correct / labels.size(0)
+    return accuracy
+
 class Trainer:
     def __init__(
         self,
@@ -99,14 +110,15 @@ class Trainer:
         print(f"End of Epoch {epoch}, Layer Weights:", model.module.layer_weights.data)
 
     def train(self, max_epochs: int, method: str):
+        self._test(method)
         for epoch in range(self.epochs_run, max_epochs):
             self._run_epoch(epoch, method)
             if self.gpu_id == 0 and epoch % self.save_every == 0:
                 self._save_snapshot(epoch)
+            self._test(method)
 
-    def test(self, method: str):
+    def _test(self, method):
         total_correct = 0
-        total_correct_norm = 0
         total_samples = 0
         for batch in train_loader:
             optimizer.zero_grad()
@@ -131,6 +143,9 @@ class Trainer:
             batch_accuracy = compute_accuracy(logits, label)
             total_correct += (batch_accuracy * label.size(0))
             total_samples += label.size(0)
+
+        epoch_accuracy = total_correct / total_samples
+        print(f"Accuracy: {epoch_accuracy * 100:.2f}%")
 
 
 def load_train_objs(model, data_folder, subject, lr, method):
