@@ -62,7 +62,7 @@ class LlamaWithLayerWeights(LlamaForCausalLM):
             cache_position=cache_position,
             **kwargs,
         )
-        hidden_states_last = output[0]
+        hidden_states_last = outputs[0]
         logits_last = self.lm_head(hidden_states_last[:, -num_logits_to_keep:, :])
 
         # 获取每一层的 hidden states
