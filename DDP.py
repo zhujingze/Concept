@@ -141,7 +141,7 @@ class Trainer:
                 out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
                 out_idxs.append(out_idx)
     
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
         
             out_idxs = torch.tensor(out_idxs, device = device)
             out_idxs = out_idxs.unsqueeze(1)
