@@ -19,9 +19,19 @@ from dataset_mmlu_wo_option import MultipleChoiceConcatWODataset
 from tqdm import tqdm
 
 
-def ddp_setup():
-    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
-    init_process_group(backend="nccl")
+# def ddp_setup():
+#     torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
+#     init_process_group(backend="nccl")
+def ddp_setup(rank: int, world_size: int):
+   """
+   Args:
+       rank: Unique identifier of each process
+      world_size: Total number of processes
+   """
+   os.environ["MASTER_ADDR"] = "localhost"
+   os.environ["MASTER_PORT"] = "12355"
+   torch.cuda.set_device(rank)
+   init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 def compute_loss(logits, labels):
     criterion = nn.NLLLoss()
@@ -175,17 +185,25 @@ def prepare_dataloader(dataset: Dataset, batch_size: int):
     )
 
 
-def main(save_every: int, total_epochs: int, batch_size: int, model: str, data_folder: str, subject: str, lr: float, save_folder: str, method: str):
-    ddp_setup()
-    dataset, model, optimizer, tokenizer = load_train_objs(model, data_folder, subject, lr, method)
+# def main(save_every: int, total_epochs: int, batch_size: int, model: str, data_folder: str, subject: str, lr: float, save_folder: str, method: str):
+#     ddp_setup()
+#     dataset, model, optimizer, tokenizer = load_train_objs(model, data_folder, subject, lr, method)
     
-    for param in model.parameters():
-        param.requires_grad = False
-    model.module.layer_weights.requires_grad = True
+#     for param in model.parameters():
+#         param.requires_grad = False
+#     model.module.layer_weights.requires_grad = True
     
-    train_data = prepare_dataloader(dataset, batch_size)
-    trainer = Trainer(model, train_data, optimizer, save_every, save_folder, data_folder, subject, lr, method)
-    trainer.train(total_epochs, method)
+#     train_data = prepare_dataloader(dataset, batch_size)
+#     trainer = Trainer(model, train_data, optimizer, save_every, save_folder, data_folder, subject, lr, method)
+#     trainer.train(total_epochs, method)
+#     destroy_process_group()
+
+def main(rank, world_size, total_epochs, save_every):
+    ddp_setup(rank, world_size)
+    dataset, model, optimizer = load_train_objs()
+    train_data = prepare_dataloader(dataset, batch_size=32)
+    trainer = Trainer(model, train_data, optimizer, rank, save_every)
+    trainer.train(total_epochs)
     destroy_process_group()
 
 
@@ -204,4 +222,6 @@ if __name__ == "__main__":
     parser.add_argument('--method', type=str)
     args = parser.parse_args()
 
-    main(args.save_every, args.total_epochs, args.batch_size, args.model, args.data_folder, args.subject, args.lr, args.save_folder, args.method)
+    # main(args.save_every, args.total_epochs, args.batch_size, args.model, args.data_folder, args.subject, args.lr, args.save_folder, args.method)
+    world_size = torch.cuda.device_count()
+    mp.spawn(main, args=(world_size, total_epochs, save_every,), nprocs=world_size)
