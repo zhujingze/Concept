@@ -158,10 +158,10 @@ class Trainer:
         print(f"Accuracy: {epoch_accuracy * 100:.2f}%")
 
 
-def load_train_objs(model, data_folder, subject, lr, method):
+def load_train_objs(model_path, data_folder, subject, lr, method):
     ### 这里用的测试集训练
-    model = LlamaWithLayerWeights.from_pretrained(model)
-    tokenizer = AutoTokenizer.from_pretrained(model)
+    model = LlamaWithLayerWeights.from_pretrained(model_path)
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
     
     train_file = os.path.join(os.path.join(data_folder, 'test'), subject + '_test.csv')
     val_file = os.path.join(os.path.join(data_folder, 'val'), subject + '_val.csv')
