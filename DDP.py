@@ -91,7 +91,7 @@ class Trainer:
         
             outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
         
-            out_idxs = torch.tensor(out_idxs, device = device)
+            out_idxs = torch.tensor(out_idxs).to(self.gpu_id)
             out_idxs = out_idxs.unsqueeze(1)
               
             logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
@@ -143,7 +143,7 @@ class Trainer:
     
             outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
         
-            out_idxs = torch.tensor(out_idxs, device = device)
+            out_idxs = torch.tensor(out_idxs).to(self.gpu_id)
             out_idxs = out_idxs.unsqueeze(1)
               
             logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
