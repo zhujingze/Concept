@@ -201,10 +201,10 @@ def prepare_dataloader(dataset: Dataset, batch_size: int):
 #     trainer.train(total_epochs, method)
 #     destroy_process_group()
 
-def main(rank, world_size, total_epochs, save_every, model, data_folder, subject, lr, save_folder, method):
+def main(rank, world_size, total_epochs, save_every, model, data_folder, subject, lr, save_folder, method, batch_size):
     ddp_setup(rank, world_size)
     dataset, model, optimizer, tokenizer = load_train_objs(model, data_folder, subject, lr, method)
-    train_data = prepare_dataloader(dataset, batch_size=32)
+    train_data = prepare_dataloader(dataset, batch_size)
     trainer = Trainer(model, train_data, optimizer, rank, save_every, save_folder, data_folder, subject,lr,method)
     trainer.train(total_epochs, method)
     destroy_process_group()
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='simple distributed training job')
     parser.add_argument('--total_epochs', type=int, help='Total epochs to train the model')
     parser.add_argument('--save_every', type=int, help='How often to save a snapshot')
-    parser.add_argument('--batch_size', default=32, type=int, help='Input batch size on each device (default: 32)')
+    parser.add_argument('--batch_size', default=4, type=int, help='Input batch size on each device (default: 32)')
     
     parser.add_argument('--model', type=str)
     parser.add_argument('--data_folder', type=str)
@@ -227,4 +227,4 @@ if __name__ == "__main__":
 
     # main(args.save_every, args.total_epochs, args.batch_size, args.model, args.data_folder, args.subject, args.lr, args.save_folder, args.method)
     world_size = torch.cuda.device_count()
-    mp.spawn(main, args=(world_size, args.total_epochs, args.save_every, args.model, args.data_folder, args.subject, args.lr, args.save_folder, args.method), nprocs=world_size)
+    mp.spawn(main, args=(world_size, args.total_epochs, args.save_every, args.model, args.data_folder, args.subject, args.lr, args.save_folder, args.method, args.batch_size), nprocs=world_size)
