@@ -6,4 +6,5 @@ CUDA_VISIBLE_DEVICES=7 python train.py \
     --bs 4 \
     --lr 1e-3 \
     --epoch 20\
+    --method 'letter'\
     --save_folder "layer_weight"\
