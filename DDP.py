@@ -98,7 +98,7 @@ class Trainer:
             logits = logits.squeeze(1)
             logits = logits[:, [319, 350, 315, 360]]
                 
-            logits = logits.to(device)
+            logits = logits.to()
             loss = compute_loss(logits, label)
             print(f"Epoch {epoch}, Batch Loss: {loss.item()}")
             loss.backward()
@@ -149,7 +149,7 @@ class Trainer:
             logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
             logits = logits.squeeze(1)
             logits = logits[:, [319, 350, 315, 360]]
-            logits = logits.to(device)
+            logits = logits.to(self.gpu_id)
             batch_accuracy = compute_accuracy(logits, label)
             total_correct += (batch_accuracy * label.size(0))
             total_samples += label.size(0)
