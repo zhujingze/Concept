@@ -57,7 +57,7 @@ class Trainer:
         lr: float,
         method: str
     ) -> None:
-        self.gpu_id = int(os.environ["LOCAL_RANK"])
+        self.gpu_id = rank
         self.model = model.to(self.gpu_id)
         self.train_data = train_data
         self.optimizer = optimizer
@@ -203,7 +203,7 @@ def main(rank, world_size, total_epochs, save_every, model, data_folder, subject
     dataset, model, optimizer, tokenizer = load_train_objs(model, data_folder, subject, lr, method)
     train_data = prepare_dataloader(dataset, batch_size=32)
     trainer = Trainer(model, train_data, optimizer, rank, save_every, save_folder, data_folder, subject,lr,method)
-    trainer.train(total_epochs)
+    trainer.train(total_epochs, method)
     destroy_process_group()
 
 
