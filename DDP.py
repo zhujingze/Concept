@@ -159,9 +159,12 @@ class Trainer:
 
 
 def load_train_objs(model_path, data_folder, subject, lr, method):
+   
     ### 这里用的测试集训练
     model = LlamaWithLayerWeights.from_pretrained(model_path)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
+    if tokenizer.pad_token is None:
+       tokenizer.pad_token = tokenizer.eos_token
     
     train_file = os.path.join(os.path.join(data_folder, 'test'), subject + '_test.csv')
     val_file = os.path.join(os.path.join(data_folder, 'val'), subject + '_val.csv')
