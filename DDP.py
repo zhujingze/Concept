@@ -198,11 +198,11 @@ def prepare_dataloader(dataset: Dataset, batch_size: int):
 #     trainer.train(total_epochs, method)
 #     destroy_process_group()
 
-def main(rank, world_size, total_epochs, save_every):
+def main(rank, world_size, total_epochs, save_every, model, data_folder, subject, lr, save_folder, method):
     ddp_setup(rank, world_size)
-    dataset, model, optimizer = load_train_objs()
+    dataset, model, optimizer = load_train_objs(model, data_folder, subject, lr, method)
     train_data = prepare_dataloader(dataset, batch_size=32)
-    trainer = Trainer(model, train_data, optimizer, rank, save_every)
+    trainer = Trainer(model, train_data, optimizer, rank, save_every, save_folder, data_folder, subject,lr,method)
     trainer.train(total_epochs)
     destroy_process_group()
 
