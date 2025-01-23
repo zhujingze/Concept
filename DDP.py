@@ -132,9 +132,9 @@ class Trainer:
         total_samples = 0
         for batch in self.train_data:
             self.optimizer.zero_grad()
-            input_ids = batch["input_ids"].to(device)
-            attention_mask = batch["attention_mask"].to(device)
-            label = batch["label"].to(device)
+            input_ids = batch["input_ids"].to(self.gpu_id)
+            attention_mask = batch["attention_mask"].to(self.gpu_id)
+            label = batch["label"].to(self.gpu_id)
 
             out_idxs = []
             for i in range(attention_mask.size(0)):
