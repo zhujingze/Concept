@@ -170,7 +170,7 @@ def load_train_objs(model_path, data_folder, subject, lr, method):
     if method == 'wo_option':
         dataset = MultipleChoiceConcatWODataset(subject, train_file, val_file, tokenizer)
     
-    optimizer = AdamW([model.module.layer_weights], lr=lr)
+    optimizer = AdamW([model.layer_weights], lr=lr)
     
     return dataset, model, optimizer, tokenizer
 
