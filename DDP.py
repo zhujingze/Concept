@@ -8,6 +8,15 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
 import os
+import argparse
+
+import torch.nn as nn
+from transformers import AutoTokenizer
+from transformers.models.llama.modeling_llama import LlamaWithLayerWeights
+from dataset_mmlu import MultipleChoiceDataset
+from dataset_mmlu_concat import MultipleChoiceConcatDataset
+from dataset_mmlu_wo_option import MultipleChoiceConcatWODataset
+from tqdm import tqdm
 
 
 def ddp_setup():
@@ -21,7 +30,11 @@ class Trainer:
         train_data: DataLoader,
         optimizer: torch.optim.Optimizer,
         save_every: int,
-        snapshot_path: str,
+        save_folder: str,
+        data_folder: str,
+        subject: str,
+        lr: float,
+        method: str
     ) -> None:
         self.gpu_id = int(os.environ["LOCAL_RANK"])
         self.model = model.to(self.gpu_id)
@@ -29,11 +42,15 @@ class Trainer:
         self.optimizer = optimizer
         self.save_every = save_every
         self.epochs_run = 0
-        self.snapshot_path = snapshot_path
-        if os.path.exists(snapshot_path):
-            print("Loading snapshot")
-            self._load_snapshot(snapshot_path)
-
+        self.save_folder = save_folder
+        self.data_folder = data_folder
+        self.subject = subject
+        self.lr = lr 
+        self.method = method
+        
+        if self.save_folder:
+            os.makedirs(save_folder, exist_ok=True)
+        
         self.model = DDP(self.model, device_ids=[self.gpu_id])
 
     def _load_snapshot(self, snapshot_path):
@@ -43,42 +60,94 @@ class Trainer:
         self.epochs_run = snapshot["EPOCHS_RUN"]
         print(f"Resuming training from snapshot at Epoch {self.epochs_run}")
 
-    def _run_batch(self, source, targets):
-        self.optimizer.zero_grad()
-        output = self.model(source)
-        loss = F.cross_entropy(output, targets)
-        loss.backward()
-        self.optimizer.step()
+    def _run_batch(self, input_ids, attention_mask, label, method, epoch):
+        if method == 'letter':
+            self.optimizer.zero_grad()
+            out_idxs = []
+            for i in range(attention_mask.size(0)):
+                out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
+                out_idxs.append(out_idx)
+        
+            outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+        
+            out_idxs = torch.tensor(out_idxs, device = device)
+            out_idxs = out_idxs.unsqueeze(1)
+              
+            logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
+            logits = logits.squeeze(1)
+            logits = logits[:, [319, 350, 315, 360]]
+                
+            logits = logits.to(device)
+            loss = compute_loss(logits, label)
+            print(f"Epoch {epoch}, Batch Loss: {loss.item()}")
+            loss.backward()
+            self.optimizer.step()
 
-    def _run_epoch(self, epoch):
+    def _run_epoch(self, epoch, method):
         b_sz = len(next(iter(self.train_data))[0])
         print(f"[GPU{self.gpu_id}] Epoch {epoch} | Batchsize: {b_sz} | Steps: {len(self.train_data)}")
         self.train_data.sampler.set_epoch(epoch)
-        for source, targets in self.train_data:
-            source = source.to(self.gpu_id)
-            targets = targets.to(self.gpu_id)
-            self._run_batch(source, targets)
+        for batch in self.train_data:
+            input_ids = batch["input_ids"].to(self.gpu_id)
+            attention_mask = batch["attention_mask"].to(self.gpu_id)
+            label = batch["label"].to(self.gpu_id)
+            self._run_batch(input_ids, attention_mask, label, method, epoch)
 
     def _save_snapshot(self, epoch):
-        snapshot = {
-            "MODEL_STATE": self.model.module.state_dict(),
-            "EPOCHS_RUN": epoch,
-        }
-        torch.save(snapshot, self.snapshot_path)
-        print(f"Epoch {epoch} | Training snapshot saved at {self.snapshot_path}")
+        if self.save_folder:
+            torch.save(model.module.layer_weights.data, os.path.join(self.save_folder, f"{self.subject}_epoch{epoch}.pth"))
+        print(f"End of Epoch {epoch}, Layer Weights:", model.module.layer_weights.data)
 
-    def train(self, max_epochs: int):
+    def train(self, max_epochs: int, method: str):
         for epoch in range(self.epochs_run, max_epochs):
-            self._run_epoch(epoch)
+            self._run_epoch(epoch, method)
             if self.gpu_id == 0 and epoch % self.save_every == 0:
                 self._save_snapshot(epoch)
 
+    def test(self, method: str):
+        total_correct = 0
+        total_correct_norm = 0
+        total_samples = 0
+        for batch in train_loader:
+            optimizer.zero_grad()
+            input_ids = batch["input_ids"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
+            label = batch["label"].to(device)
 
-def load_train_objs():
-    train_set = MyTrainDataset(2048)  # load your dataset
-    model = torch.nn.Linear(20, 1)  # load your model
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
-    return train_set, model, optimizer
+            out_idxs = []
+            for i in range(attention_mask.size(0)):
+                out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
+                out_idxs.append(out_idx)
+    
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        
+            out_idxs = torch.tensor(out_idxs, device = device)
+            out_idxs = out_idxs.unsqueeze(1)
+              
+            logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
+            logits = logits.squeeze(1)
+            logits = logits[:, [319, 350, 315, 360]]
+            logits = logits.to(device)
+            batch_accuracy = compute_accuracy(logits, label)
+            total_correct += (batch_accuracy * label.size(0))
+            total_samples += label.size(0)
+
+
+def load_train_objs(model, data_folder, subject, lr, method):
+    ### 这里用的测试集训练
+    model = LlamaWithLayerWeights.from_pretrained(model)
+    tokenizer = AutoTokenizer.from_pretrained(model)
+    
+    train_file = os.path.join(os.path.join(data_folder, 'test'), subject + '_test.csv')
+    val_file = os.path.join(os.path.join(data_folder, 'val'), subject + '_val.csv')
+    if method == 'letter':
+        dataset = MultipleChoiceDataset(subject, train_file, val_file, tokenizer)
+    if method == 'wo_option':
+        dataset = MultipleChoiceConcatWODataset(subject, train_file, val_file, tokenizer)
+    
+    optimizer = AdamW([model.module.layer_weights], lr=lr)
+    
+    return dataset, model, optimizer, tokenizer
 
 
 def prepare_dataloader(dataset: Dataset, batch_size: int):
@@ -91,12 +160,17 @@ def prepare_dataloader(dataset: Dataset, batch_size: int):
     )
 
 
-def main(save_every: int, total_epochs: int, batch_size: int, snapshot_path: str = "snapshot.pt"):
+def main(save_every: int, total_epochs: int, batch_size: int, model: str, data_folder: str, subject: str, lr: float, save_folder: str: str, method: str):
     ddp_setup()
-    dataset, model, optimizer = load_train_objs()
+    dataset, model, optimizer, tokenizer = load_train_objs(model, data_folder, subject, lr, method)
+    
+    for param in model.parameters():
+        param.requires_grad = False
+    model.module.layer_weights.requires_grad = True
+    
     train_data = prepare_dataloader(dataset, batch_size)
-    trainer = Trainer(model, train_data, optimizer, save_every, snapshot_path)
-    trainer.train(total_epochs)
+    trainer = Trainer(model, train_data, optimizer, save_every, save_folder, data_folder, subject, lr, method)
+    trainer.train(total_epochs, method)
     destroy_process_group()
 
 
@@ -106,6 +180,13 @@ if __name__ == "__main__":
     parser.add_argument('total_epochs', type=int, help='Total epochs to train the model')
     parser.add_argument('save_every', type=int, help='How often to save a snapshot')
     parser.add_argument('--batch_size', default=32, type=int, help='Input batch size on each device (default: 32)')
+    
+    parser.add_argument('--model', type=str)
+    parser.add_argument('--data_folder', type=str)
+    parser.add_argument('--subject', type=str)
+    parser.add_argument('--lr', type=float)
+    parser.add_argument('--save_folder', type=str)
+    parser.add_argument('--method', type=str)
     args = parser.parse_args()
 
-    main(args.save_every, args.total_epochs, args.batch_size)
+    main(args.save_every, args.total_epochs, args.batch_size, args.model, args.data_folder, args.subject, args.lr, args.save_folder, args.method)
