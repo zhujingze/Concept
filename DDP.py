@@ -224,4 +224,4 @@ if __name__ == "__main__":
 
     # main(args.save_every, args.total_epochs, args.batch_size, args.model, args.data_folder, args.subject, args.lr, args.save_folder, args.method)
     world_size = torch.cuda.device_count()
-    mp.spawn(main, args=(world_size, total_epochs, save_every,), nprocs=world_size)
+    mp.spawn(main, args=(world_size, args.total_epochs, args.save_every, args.model, args.data_folder, args.subject, args.lr, args.save_folder, args.method), nprocs=world_size)
