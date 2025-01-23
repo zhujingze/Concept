@@ -17,7 +17,7 @@ from dataset_mmlu import MultipleChoiceDataset
 from dataset_mmlu_concat import MultipleChoiceConcatDataset
 from dataset_mmlu_wo_option import MultipleChoiceConcatWODataset
 from tqdm import tqdm
-
+from torch.optim import AdamW
 
 # def ddp_setup():
 #     torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
