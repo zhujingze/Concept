@@ -175,7 +175,7 @@ def prepare_dataloader(dataset: Dataset, batch_size: int):
     )
 
 
-def main(save_every: int, total_epochs: int, batch_size: int, model: str, data_folder: str, subject: str, lr: float, save_folder: str: str, method: str):
+def main(save_every: int, total_epochs: int, batch_size: int, model: str, data_folder: str, subject: str, lr: float, save_folder: str, method: str):
     ddp_setup()
     dataset, model, optimizer, tokenizer = load_train_objs(model, data_folder, subject, lr, method)
     
