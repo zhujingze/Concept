@@ -116,8 +116,8 @@ class Trainer:
 
     def _save_snapshot(self, epoch):
         if self.save_folder:
-            torch.save(self.model.layer_weights.data, os.path.join(self.save_folder, f"{self.subject}_epoch{epoch}.pth"))
-        print(f"End of Epoch {epoch}, Layer Weights:", model.layer_weights.data)
+            torch.save(self.model.module.layer_weights.data, os.path.join(self.save_folder, f"{self.subject}_epoch{epoch}.pth"))
+        print(f"End of Epoch {epoch}, Layer Weights:", self.model.module.layer_weights.data)
 
     def train(self, max_epochs: int, method: str):
         self._test(method)
