@@ -81,7 +81,7 @@ class Trainer:
         self.epochs_run = snapshot["EPOCHS_RUN"]
         print(f"Resuming training from snapshot at Epoch {self.epochs_run}")
 
-    def _run_batch(self, input_ids, attention_mask, label, method, epoch):
+    def _run_batch(self, input_ids, attention_mask, label, method, epoch, pre_len=None):
         if method == 'letter':
             self.optimizer.zero_grad()
             out_idxs = []
@@ -103,6 +103,46 @@ class Trainer:
             print(f"Epoch {epoch}, Batch Loss: {loss.item()}")
             loss.backward()
             self.optimizer.step()
+        if args.method in ['concat', 'wo_option']:
+            self.optimizer.zero_grad()
+            # batch
+            all_batch = []
+            for i in range(attention_mask.size(0)):
+                input_ids_sample = input_ids[i]
+                attention_mask_sample = attention_mask[i]
+                prefix_len = pre_len[i]
+                answer_ids = input_ids_sample[:, prefix_len-1:]
+                real_answer_ids = []
+                for row in answer_ids:
+                    idx = (row != 2).nonzero(as_tuple=True)[0].max().item()
+                    row = row[:idx+1]
+                    real_answer_ids.append(row)
+
+                outputs = self.model(input_ids=input_ids_sample, attention_mask=attention_mask_sample)
+
+                # option
+                one_batch = []
+                for j in range(attention_mask_sample.size(0)):
+                    num = len(real_answer_ids[j])
+                    start_idx = pre_len[i].to(self.gpu_id)
+                    idx_range = torch.arange(num).unsqueeze(0).expand(1, num).to(device)
+                    start_idx_tensor = start_idx.clone().unsqueeze(0).expand(1, num) - 2
+                    final_idx = start_idx_tensor + idx_range
+                    
+                    logits_selected = outputs.logits[j][final_idx]
+                    real_answer_ids[j] = real_answer_ids[j].unsqueeze(0)
+                    logits_selected = logits_selected[0, torch.arange(num), real_answer_ids[j].squeeze(0)]
+                    logits_selected = logits_selected.sum()
+                    # logits_selected = logits_selected.sum() / num
+                    one_batch.append(logits_selected)
+                one_batch = torch.stack(one_batch)
+                all_batch.append(one_batch)
+            all_batch = torch.stack(all_batch, dim=0)
+            logits = all_batch.to(self.gpu_id)
+            loss = compute_loss(logits, label)
+            loss.backward()
+            print(f"Epoch {epoch+1}, Batch Loss: {loss.item()}")
+            self.optimizer.step()
 
     def _run_epoch(self, epoch, method):
         b_sz = len(next(iter(self.train_data))[0])
@@ -112,7 +152,11 @@ class Trainer:
             input_ids = batch["input_ids"].to(self.gpu_id)
             attention_mask = batch["attention_mask"].to(self.gpu_id)
             label = batch["label"].to(self.gpu_id)
-            self._run_batch(input_ids, attention_mask, label, method, epoch)
+            if method == 'letter':
+                self._run_batch(input_ids, attention_mask, label, method, epoch)
+            if method == 'wo_option':
+                pre_len = batch["prefix_ids_len"].to(self.gpu_id)
+                self._run_batch(input_ids, attention_mask, label, method, epoch, pre_len)
 
     def _save_snapshot(self, epoch):
         if self.save_folder:
