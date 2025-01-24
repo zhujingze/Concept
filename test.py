@@ -38,7 +38,7 @@ def main(args):
     train_loader = DataLoader(dataset, batch_size = args.bs, shuffle = True)
     
     if args.save_folder:
-        os.makedirs(save_folder, exist_ok=True)
+        os.makedirs(args.save_folder, exist_ok=True)
 
     #ori
     total_correct = 0
@@ -46,7 +46,6 @@ def main(args):
     total_samples = 0
     if args.method == "letter":
         for batch in train_loader:
-            optimizer.zero_grad()
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
             label = batch["label"].to(device)
@@ -71,7 +70,6 @@ def main(args):
 
     if args.method in ['concat', 'wo_option']:
         for batch in train_loader:
-            optimizer.zero_grad()
             input_ids = batch["input_ids"].to(device)
             prefix_ids_len = batch["prefix_ids_len"].to(device)
             attention_mask = batch["attention_mask"].to(device)
