@@ -226,8 +226,11 @@ class Trainer:
     model.eval()
 
     with torch.no_grad():  # Disable gradient computation during evaluation
-        for step, (inputs, labels) in enumerate(dataloader):
-            inputs, labels = inputs.cuda(), labels.cuda()  # Move data to GPU
+        for batch in self.train_data:
+            input_ids = batch["input_ids"].to(self.gpu_id)
+            attention_mask = batch["attention_mask"].to(self.gpu_id)
+            label = batch["label"].to(self.gpu_id)
+            if method == 'letter':
 
             # Forward pass: get model outputs
             outputs = model(inputs)
