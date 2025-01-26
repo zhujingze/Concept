@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
-from datautils import MyTrainDataset
 
 import torch.multiprocessing as mp
 from torch.utils.data.distributed import DistributedSampler
@@ -296,26 +295,26 @@ def prepare_dataloader(dataset: Dataset, batch_size: int):
     )
 
 
-# def main(save_every: int, total_epochs: int, batch_size: int, model: str, data_folder: str, subject: str, lr: float, save_folder: str, method: str):
-#     ddp_setup()
-#     dataset, model, optimizer, tokenizer = load_train_objs(model, data_folder, subject, lr, method)
-    
-#     for param in model.parameters():
-#         param.requires_grad = False
-#     model.module.layer_weights.requires_grad = True
-    
-#     train_data = prepare_dataloader(dataset, batch_size)
-#     trainer = Trainer(model, train_data, optimizer, save_every, save_folder, data_folder, subject, lr, method)
-#     trainer.train(total_epochs, method)
-#     destroy_process_group()
-
-def main(rank, world_size, total_epochs, save_every, model, data_folder, subject, lr, save_folder, method, batch_size):
-    ddp_setup(rank, world_size)
+def main(save_every: int, total_epochs: int, batch_size: int, model: str, data_folder: str, subject: str, lr: float, save_folder: str, method: str):
+    ddp_setup()
     dataset, model, optimizer, tokenizer = load_train_objs(model, data_folder, subject, lr, method)
+    
+    for param in model.parameters():
+        param.requires_grad = False
+    model.module.layer_weights.requires_grad = True
+    
     train_data = prepare_dataloader(dataset, batch_size)
-    trainer = Trainer(model, train_data, optimizer, save_every, save_folder, data_folder, subject,lr,method)
+    trainer = Trainer(model, train_data, optimizer, save_every, save_folder, data_folder, subject, lr, method)
     trainer.train(total_epochs, method)
     destroy_process_group()
+
+# def main(rank, world_size, total_epochs, save_every, model, data_folder, subject, lr, save_folder, method, batch_size):
+#     ddp_setup(rank, world_size)
+#     dataset, model, optimizer, tokenizer = load_train_objs(model, data_folder, subject, lr, method)
+#     train_data = prepare_dataloader(dataset, batch_size)
+#     trainer = Trainer(model, train_data, optimizer, save_every, save_folder, data_folder, subject,lr,method)
+#     trainer.train(total_epochs, method)
+#     destroy_process_group()
 
 
 if __name__ == "__main__":
