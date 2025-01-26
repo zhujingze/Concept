@@ -186,7 +186,7 @@ class Trainer:
 
     def _eval(self):
         results = torch.tensor([]).cuda()
-        model.eval()
+        self.model.eval()
     
         with torch.no_grad():
             for batch in self.train_data:
@@ -301,7 +301,7 @@ def main(save_every: int, total_epochs: int, batch_size: int, model: str, data_f
     
     for param in model.parameters():
         param.requires_grad = False
-    model.module.layer_weights.requires_grad = True
+    model.layer_weights.requires_grad = True
     
     train_data = prepare_dataloader(dataset, batch_size)
     trainer = Trainer(model, train_data, optimizer, save_every, save_folder, data_folder, subject, lr, method)
