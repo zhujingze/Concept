@@ -95,7 +95,7 @@ class Trainer:
         print(f"Resuming training from snapshot at Epoch {self.epochs_run}")
 
     def _run_batch(self, input_ids, attention_mask, label, method, epoch, pre_len=None):
-        if method == 'letter':
+        if self.method == 'letter':
             self.optimizer.zero_grad()
             out_idxs = []
             for i in range(attention_mask.size(0)):
@@ -116,7 +116,7 @@ class Trainer:
             print(f"Epoch {epoch}, Batch Loss: {loss.item()}")
             loss.backward()
             self.optimizer.step()
-        if args.method in ['concat', 'wo_option']:
+        iself.method in ['concat', 'wo_option']:
             self.optimizer.zero_grad()
             # batch
             all_batch = []
@@ -138,7 +138,7 @@ class Trainer:
                 for j in range(attention_mask_sample.size(0)):
                     num = len(real_answer_ids[j])
                     start_idx = pre_len[i].to(self.gpu_id)
-                    idx_range = torch.arange(num).unsqueeze(0).expand(1, num).to(device)
+                    idx_range = torch.arange(num).unsqueeze(0).expand(1, num).to(self.gpu_id)
                     start_idx_tensor = start_idx.clone().unsqueeze(0).expand(1, num) - 2
                     final_idx = start_idx_tensor + idx_range
                     
@@ -200,14 +200,14 @@ class Trainer:
                         out_idxs.append(out_idx)
             
                     outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-                
-                    out_idxs = torch.tensor(out_idxs, device = device)
+                    out_idxs = torch.tensor(out_idxs).to(out_idxs = torch.tensor(out_idxs)
+
                     out_idxs = out_idxs.unsqueeze(1)
                       
                     logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
                     logits = logits.squeeze(1)
                     logits = logits[:, [319, 350, 315, 360]]
-                    logits = logits.to(device)
+                    logits = logits.to(self.gpu_id)
                     res = compute_accuracy(logits, label)
                     results = torch.cat([results, res], dim=0)
     
@@ -233,8 +233,8 @@ class Trainer:
                         one_batch_norm = []
                         for j in range(attention_mask_sample.size(0)):
                             num = len(real_answer_ids[j])
-                            start_idx = prefix_ids_len[i].to(device)
-                            idx_range = torch.arange(num).unsqueeze(0).expand(1, num).to(device)
+                            start_idx = prefix_ids_len[i].to(self.gpu_id)
+                            idx_range = torch.arange(num).unsqueeze(0).expand(1, num).to(self.gpu_id)
                             start_idx_tensor = start_idx.clone().unsqueeze(0).expand(1, num) - 2
                             final_idx = start_idx_tensor + idx_range
                             
@@ -252,8 +252,8 @@ class Trainer:
                         all_batch_norm.append(one_batch_norm)
                     all_batch = torch.stack(all_batch, dim=0)
                     all_batch_norm = torch.stack(all_batch_norm, dim=0)
-                    logits = all_batch.to(device)
-                    logits_norm = all_batch_norm.to(device)
+                    logits = all_batch.to(self.gpu_id)
+                    logits_norm = all_batch_norm.to(self.gpu_id)
         
                     res = compute_accuracy(logits, label)
                     results = torch.cat([results, res], dim=0)
