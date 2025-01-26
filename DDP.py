@@ -98,7 +98,7 @@ class Trainer:
             logits = logits.squeeze(1)
             logits = logits[:, [319, 350, 315, 360]]
                 
-            logits = logits.to()
+            logits = logits.to(self.gpu_id)
             loss = compute_loss(logits, label)
             print(f"Epoch {epoch}, Batch Loss: {loss.item()}")
             loss.backward()
