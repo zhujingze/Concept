@@ -54,9 +54,8 @@ def compute_loss(logits, labels):
 
 def compute_accuracy(logits, labels):
     _, predicted = torch.max(logits, 1)
-    correct = (predicted == labels).sum().item()
-    accuracy = correct / labels.size(0)
-    return accuracy
+    res = (predicted == labels)
+    return res
 
 class Trainer:
     def __init__(
@@ -82,6 +81,7 @@ class Trainer:
         self.subject = subject
         self.lr = lr 
         self.method = method
+        self.world_size = torch.cuda.device_count()
         
         if self.save_folder:
             os.makedirs(save_folder, exist_ok=True)
@@ -185,69 +185,86 @@ class Trainer:
                 self._save_snapshot(epoch)
             self._test(method)
 
-    def _test(self, method):
-        total_correct = 0
-        total_samples = 0
-        for batch in self.train_data:
-            self.optimizer.zero_grad()
-            input_ids = batch["input_ids"].to(self.gpu_id)
-            attention_mask = batch["attention_mask"].to(self.gpu_id)
-            label = batch["label"].to(self.gpu_id)
-
-            out_idxs = []
-            for i in range(attention_mask.size(0)):
-                out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
-                out_idxs.append(out_idx)
+    def _eval(self):
+        results = torch.tensor([]).cuda()
+        model.eval()
     
-            outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+        with torch.no_grad():
+            for batch in self.train_data:
+                input_ids = batch["input_ids"].to(self.gpu_id)
+                attention_mask = batch["attention_mask"].to(self.gpu_id)
+                label = batch["label"].to(self.gpu_id)
+                if method == 'letter':
+                    out_idxs = []
+                    for i in range(attention_mask.size(0)):
+                        out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
+                        out_idxs.append(out_idx)
+            
+                    outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+                
+                    out_idxs = torch.tensor(out_idxs, device = device)
+                    out_idxs = out_idxs.unsqueeze(1)
+                      
+                    logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
+                    logits = logits.squeeze(1)
+                    logits = logits[:, [319, 350, 315, 360]]
+                    logits = logits.to(device)
+                    res = compute_accuracy(logits, label)
+                    results = torch.cat([results, res], dim=0)
+    
+                if args.method in ['concat', 'wo_option']:
+                    # batch
+                    all_batch = []
+                    all_batch_norm = []
+                    for i in range(attention_mask.size(0)):
+                        input_ids_sample = input_ids[i]
+                        attention_mask_sample = attention_mask[i]
+                        prefix_len = prefix_ids_len[i]
+                        answer_ids = input_ids_sample[:, prefix_len-1:]
+                        real_answer_ids = []
+                        for row in answer_ids:
+                            idx = (row != 2).nonzero(as_tuple=True)[0].max().item()
+                            row = row[:idx+1]
+                            real_answer_ids.append(row)
         
-            out_idxs = torch.tensor(out_idxs).to(self.gpu_id)
-            out_idxs = out_idxs.unsqueeze(1)
-              
-            logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
-            logits = logits.squeeze(1)
-            logits = logits[:, [319, 350, 315, 360]]
-            logits = logits.to(self.gpu_id)
-            batch_accuracy = compute_accuracy(logits, label)
-            total_correct += (batch_accuracy * label.size(0))
-            total_samples += label.size(0)
-
-        epoch_accuracy = total_correct / total_samples
-        print(f"Accuracy: {epoch_accuracy * 100:.2f}%")
-
-    def _eval(model, dataloader, world_size):
-    """
-    This function evaluates the model and computes the accuracy across multiple GPUs.
-    It synchronizes the results across all GPUs using `sync_across_gpus`.
-    """
-    results = torch.tensor([]).cuda()  # Initialize an empty tensor to store results on the current GPU
-
-    # Set the model to evaluation mode
-    model.eval()
-
-    with torch.no_grad():  # Disable gradient computation during evaluation
-        for batch in self.train_data:
-            input_ids = batch["input_ids"].to(self.gpu_id)
-            attention_mask = batch["attention_mask"].to(self.gpu_id)
-            label = batch["label"].to(self.gpu_id)
-            if method == 'letter':
-
-            # Forward pass: get model outputs
-            outputs = model(inputs)
-
-            # Calculate the accuracy for this batch
-            res = (outputs.argmax(-1) == labels)  # True for correct predictions, False for incorrect
-            results = torch.cat([results, res], dim=0)  # Concatenate results across batches
-
-    # Synchronize results across all GPUs
-    results = sync_across_gpus(results, world_size)
-
-    # Calculate the mean accuracy
-    mean_acc = (results.sum() / len(results)).item()  # Compute the average accuracy
-
-    return mean_acc
-
-
+                        outputs = self.model(input_ids=input_ids_sample, attention_mask=attention_mask_sample)
+        
+                        # option
+                        one_batch = []
+                        one_batch_norm = []
+                        for j in range(attention_mask_sample.size(0)):
+                            num = len(real_answer_ids[j])
+                            start_idx = prefix_ids_len[i].to(device)
+                            idx_range = torch.arange(num).unsqueeze(0).expand(1, num).to(device)
+                            start_idx_tensor = start_idx.clone().unsqueeze(0).expand(1, num) - 2
+                            final_idx = start_idx_tensor + idx_range
+                            
+                            logits_selected = outputs.logits[j][final_idx]
+                            real_answer_ids[j] = real_answer_ids[j].unsqueeze(0)
+                            logits_selected = logits_selected[0, torch.arange(num), real_answer_ids[j].squeeze(0)]
+                            logits_selected = logits_selected.sum()
+                            logits_selected_norm = logits_selected.sum() / num
+                            
+                            one_batch.append(logits_selected)
+                            one_batch_norm.append(logits_selected_norm)
+                        one_batch = torch.stack(one_batch)
+                        one_batch_norm = torch.stack(one_batch_norm)
+                        all_batch.append(one_batch)
+                        all_batch_norm.append(one_batch_norm)
+                    all_batch = torch.stack(all_batch, dim=0)
+                    all_batch_norm = torch.stack(all_batch_norm, dim=0)
+                    logits = all_batch.to(device)
+                    logits_norm = all_batch_norm.to(device)
+        
+                    res = compute_accuracy(logits, label)
+                    results = torch.cat([results, res], dim=0)
+    
+            # Synchronize results across all GPUs
+            results = sync_across_gpus(results, self.world_size)
+            # Calculate the mean accuracy
+            mean_acc = (results.sum() / len(results)).item()  # Compute the average accuracy
+        
+            return mean_acc
 
 def load_train_objs(model_path, data_folder, subject, lr, method):
    
