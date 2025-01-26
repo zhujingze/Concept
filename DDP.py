@@ -158,7 +158,7 @@ class Trainer:
             self.optimizer.step()
 
     def _run_epoch(self, epoch, method):
-        b_sz = len(next(iter(self.train_data))[0])
+        b_sz = next(iter(self.train_data))['input_ids'].size(0)
         print(f"[GPU{self.gpu_id}] Epoch {epoch} | Batchsize: {b_sz} | Steps: {len(self.train_data)}")
         self.train_data.sampler.set_epoch(epoch)
         for batch in self.train_data:
