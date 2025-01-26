@@ -33,6 +33,20 @@ def ddp_setup():
 #    torch.cuda.set_device(rank)
 #    init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
+def sync_across_gpus(t, world_size):
+    """
+    This function synchronizes the tensor 't' across all GPUs and returns
+    the concatenated result from all GPUs.
+    """
+    # Create a list of tensors to gather the results from each GPU
+    gather_t_tensor = [torch.zeros_like(t) for _ in range(world_size)]
+    
+    # Gather all tensors from all GPUs
+    dist.all_gather(gather_t_tensor, t)
+    
+    # Concatenate the results along the first dimension
+    return torch.cat(gather_t_tensor, dim=0)
+
 def compute_loss(logits, labels):
     criterion = nn.NLLLoss()
     loss = criterion(logits, labels)
@@ -200,6 +214,36 @@ class Trainer:
 
         epoch_accuracy = total_correct / total_samples
         print(f"Accuracy: {epoch_accuracy * 100:.2f}%")
+
+    def _eval(model, dataloader, world_size):
+    """
+    This function evaluates the model and computes the accuracy across multiple GPUs.
+    It synchronizes the results across all GPUs using `sync_across_gpus`.
+    """
+    results = torch.tensor([]).cuda()  # Initialize an empty tensor to store results on the current GPU
+
+    # Set the model to evaluation mode
+    model.eval()
+
+    with torch.no_grad():  # Disable gradient computation during evaluation
+        for step, (inputs, labels) in enumerate(dataloader):
+            inputs, labels = inputs.cuda(), labels.cuda()  # Move data to GPU
+
+            # Forward pass: get model outputs
+            outputs = model(inputs)
+
+            # Calculate the accuracy for this batch
+            res = (outputs.argmax(-1) == labels)  # True for correct predictions, False for incorrect
+            results = torch.cat([results, res], dim=0)  # Concatenate results across batches
+
+    # Synchronize results across all GPUs
+    results = sync_across_gpus(results, world_size)
+
+    # Calculate the mean accuracy
+    mean_acc = (results.sum() / len(results)).item()  # Compute the average accuracy
+
+    return mean_acc
+
 
 
 def load_train_objs(model_path, data_folder, subject, lr, method):
