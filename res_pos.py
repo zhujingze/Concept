@@ -1,40 +1,36 @@
-def extract_lines(input_file, output_file):
-    with open(input_file, 'r') as file:
-        lines = file.readlines()  # 读取所有行
-        
-    extracted_lines = []  # 存储提取的行数据
+def process_accuracy_file(file_path):
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
     
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        
-        # 1. 查找包含“Layer Weights”的行及接下来的6行（共7行）
-        if "Layer Weights" in line:
-            extracted_lines.append(line.strip())  # 添加当前行
-            # 添加接下来的6行
-            for j in range(1, 7):
-                if i + j < len(lines):  # 防止索引越界
-                    extracted_lines.append(lines[i + j].strip())
-            i += 7  # 跳过接下来的6行
-            continue  # 跳过后续的处理
-        
-        # 2. 查找包含“Accuracy”的行
-        if "Accuracy" in line:
-            extracted_lines.append(line.strip())
-        
-        i += 1  # 处理下一行
-
-    # 删除包含"prompt"的行
-    extracted_lines = [line for line in extracted_lines if "prompt" not in line.lower()]
+    accuracy_lines = []
+    for i, line in enumerate(lines):
+        if 'Accuracy' in line:
+            # 获取该行的Accuracy和total num值
+            accuracy_value = float(line.split('Accuracy:')[1].split()[0])
+            total_num_value = int(line.split('total num')[1].split()[1])
+            accuracy_lines.append((i, accuracy_value, total_num_value))
     
-    # 将提取的内容保存到输出文件
-    with open(output_file, 'w') as output:
-        for line in extracted_lines:
-            output.write(line + '\n')
+    group_num = 0
+    for idx, accuracy_value, total_num_value in accuracy_lines:
+        # 定义每个Group的上下范围
+        group_start = max(0, idx - 5)
+        group_end = min(len(lines), idx + 6)
+        
+        total_accuracy = 0
+        total_count = 0
+        
+        # 遍历该范围内的行
+        for i in range(group_start, group_end):
+            if 'Accuracy' in lines[i]:
+                # 获取该行的Accuracy和total num值
+                accuracy_value_in_group = float(lines[i].split('Accuracy:')[1].split()[0])
+                total_num_value_in_group = int(lines[i].split('total num')[1].split()[1])
+                total_accuracy += accuracy_value_in_group * total_num_value_in_group
+                total_count += total_num_value_in_group
+        
+        print(f"Group: {group_num}, num: {len(range(group_start, group_end))}, total: {total_accuracy}")
+        group_num += 1
 
-    print(f"Extracted lines have been saved to {output_file}")
-
-# 调用函数进行提取
-input_file = 'log.txt'  # 输入的txt文件
-output_file = 'extracted.txt'  # 输出的txt文件
-extract_lines(input_file, output_file)
+# 调用函数
+file_path = 'your_file.txt'  # 替换成你的文件路径
+process_accuracy_file(file_path)
