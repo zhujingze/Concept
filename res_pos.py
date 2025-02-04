@@ -7,16 +7,24 @@ def read_file(file_path):
 
 # 判断label是否与logits中的最大值对应
 def check_correctness(logits_line, label_line):
-    # 从logits_line中提取logits值
-    logits = re.findall(r'\[([0-9.,\s]+)\]', logits_line)[0]
-    logits = list(map(float, logits.split(',')))
-    
+    # 确保logits_line不为空且包含预期的格式，支持科学计数法
+    logits_match = re.findall(r'logits\s*tensor\(\[([0-9.e+\-,\s]+)\]', logits_line)
+    if not logits_match:
+        return False  # 如果没有找到匹配的logits，返回错误
+
+    logits = logits_match[0]
+    logits = list(map(float, logits.split(',')))  # 转换为浮动列表
+
     # 从label_line中提取label值
-    label = int(re.findall(r'\[([0-9]+)\]', label_line)[0])
+    label_match = re.findall(r'label\s*tensor\(\[([0-9]+)\]', label_line)
+    if not label_match:
+        return False  # 如果没有找到匹配的label，返回错误
     
+    label = int(label_match[0])
+
     # 获取logits中最大值的索引
     predicted_label = logits.index(max(logits))
-    
+
     # 判断label是否与最大值的索引对应
     return predicted_label == label
 
