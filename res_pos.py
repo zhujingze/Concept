@@ -1,4 +1,5 @@
 import torch
+import re
 
 def calculate_accuracy(file_path):
     correct = 0
@@ -12,19 +13,17 @@ def calculate_accuracy(file_path):
         logits_line = lines[i].strip()
         label_line = lines[i+1].strip()
 
-        # 解析logits
-        logits_start = logits_line.find("tensor([") + len("tensor([")
-        logits_end = logits_line.find("],", logits_start)
-        logits = torch.tensor(eval(logits_line[logits_start:logits_end+1]))
-
-        # 解析label
-        label_start = label_line.find("tensor([") + len("tensor([")
-        label_end = label_line.find("])", label_start)
-        label = torch.tensor(eval(label_line[label_start:label_end+1]))
-
         # 如果是'Original'就结束
         if "Original" in logits_line:
             break
+
+        # 提取logits中的数值
+        logits_values = re.findall(r"[-+]?\d*\.\d+|\d+", logits_line)  # 提取数字
+        logits = torch.tensor([float(x) for x in logits_values])
+
+        # 提取label中的数值
+        label_values = re.findall(r"[-+]?\d*\.\d+|\d+", label_line)  # 提取数字
+        label = torch.tensor([int(x) for x in label_values])
 
         # 计算最大概率的索引
         predicted_label = torch.argmax(logits).item()
