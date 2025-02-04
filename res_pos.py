@@ -1,39 +1,44 @@
-def process_accuracy_file(file_path):
+import re
+
+# 读取文件内容
+def read_file(file_path):
     with open(file_path, 'r') as f:
-        lines = f.readlines()
+        return f.readlines()
 
-    group_num = 0  
-    total_accuracy = 0  
-    total_count = 0  
-    current_group_end = -1  # 当前group的结束范围
+# 判断label是否与logits中的最大值对应
+def check_correctness(logits_line, label_line):
+    # 从logits_line中提取logits值
+    logits = re.findall(r'\[([0-9.,\s]+)\]', logits_line)[0]
+    logits = list(map(float, logits.split(',')))
+    
+    # 从label_line中提取label值
+    label = int(re.findall(r'\[([0-9]+)\]', label_line)[0])
+    
+    # 获取logits中最大值的索引
+    predicted_label = logits.index(max(logits))
+    
+    # 判断label是否与最大值的索引对应
+    return predicted_label == label
 
-    i = 0
-    while i < len(lines):
-        if 'Accuracy' in lines[i] and 'total num' in lines[i]:
-            if i > current_group_end:  # 说明要开始新的group
-                if total_count > 0:  # 打印上一个group的结果
-                    print(f"Group: {group_num}, num: {total_count}, total: {total_accuracy}")
-                    group_num += 1
-                total_accuracy = 0  
-                total_count = 0  
+# 统计正确率
+def calculate_accuracy(file_path):
+    lines = read_file(file_path)
+    total = 0
+    correct = 0
+    for i in range(0, len(lines), 2):
+        if 'Original' in lines[i]:
+            break
+        logits_line = lines[i]
+        label_line = lines[i + 1]
+        
+        if check_correctness(logits_line, label_line):
+            correct += 1
+        total += 1
+    
+    accuracy = correct / total * 100 if total > 0 else 0
+    return accuracy
 
-            # 计算新group的范围
-            current_group_end = max(current_group_end, i + 5)
-
-            try:
-                accuracy_value = float(lines[i].split('Accuracy:')[1].split()[0])
-                total_num_value = int(lines[i].split('total num')[1].split()[1])
-                total_accuracy += accuracy_value * total_num_value
-                total_count += total_num_value
-            except IndexError:
-                print(f"Skipping line {i} due to unexpected format: {lines[i].strip()}")
-
-        i += 1  
-
-    # 处理最后一个group
-    if total_count > 0:
-        print(f"Group: {group_num}, num: {total_count}, total: {total_accuracy}")
-
-# 调用函数
-file_path = 'your_file.txt'  
-process_accuracy_file(file_path)
+# 使用方法
+file_path = 'your_file.txt'  # 修改为实际文件路径
+accuracy = calculate_accuracy(file_path)
+print(f"Correctness rate: {accuracy:.2f}%")
