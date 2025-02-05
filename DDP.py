@@ -177,12 +177,12 @@ class Trainer:
         print(f"End of Epoch {epoch}, Layer Weights:", self.model.module.layer_weights.data)
 
     def train(self, max_epochs: int, method: str):
-        self._test(method)
+        #self._eval(method)
         for epoch in range(self.epochs_run, max_epochs):
             self._run_epoch(epoch, method)
             if self.gpu_id == 0 and epoch % self.save_every == 0 and self.save_folder:
                 self._save_snapshot(epoch)
-            self._test(method)
+            #self._eval(method)
 
     def _eval(self):
         results = torch.tensor([]).cuda()
@@ -193,14 +193,14 @@ class Trainer:
                 input_ids = batch["input_ids"].to(self.gpu_id)
                 attention_mask = batch["attention_mask"].to(self.gpu_id)
                 label = batch["label"].to(self.gpu_id)
-                if method == 'letter':
+                if self.method == 'letter':
                     out_idxs = []
                     for i in range(attention_mask.size(0)):
                         out_idx = ((attention_mask[i] != 1).nonzero(as_tuple=True)[0])[0].item() - 1
                         out_idxs.append(out_idx)
             
                     outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-                    out_idxs = torch.tensor(out_idxs).to(out_idxs = torch.tensor(out_idxs)
+                    out_idxs = torch.tensor(out_idxs).to(self.gpu_id)
 
                     out_idxs = out_idxs.unsqueeze(1)
                       
@@ -211,7 +211,7 @@ class Trainer:
                     res = compute_accuracy(logits, label)
                     results = torch.cat([results, res], dim=0)
     
-                if args.method in ['concat', 'wo_option']:
+                if self.method in ['concat', 'wo_option']:
                     # batch
                     all_batch = []
                     all_batch_norm = []
