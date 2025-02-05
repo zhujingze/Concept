@@ -116,7 +116,7 @@ class Trainer:
             print(f"Epoch {epoch}, Batch Loss: {loss.item()}")
             loss.backward()
             self.optimizer.step()
-        iself.method in ['concat', 'wo_option']:
+        if self.method in ['concat', 'wo_option']:
             self.optimizer.zero_grad()
             # batch
             all_batch = []
