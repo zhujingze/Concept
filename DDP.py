@@ -109,7 +109,7 @@ class Trainer:
               
             logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
             logits = logits.squeeze(1)
-            logits = logits[:, [319, 350, 315, 360]]
+            logits = logits[:, [29909, 29933, 29907, 29928]]
                 
             logits = logits.to(self.gpu_id)
             loss = compute_loss(logits, label)
@@ -206,7 +206,7 @@ class Trainer:
                       
                     logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
                     logits = logits.squeeze(1)
-                    logits = logits[:, [319, 350, 315, 360]]
+                    logits = logits[:, [29909, 29933, 29907, 29928]]
                     logits = logits.to(self.gpu_id)
                     res = compute_accuracy(logits, label)
                     results = torch.cat([results, res], dim=0)
