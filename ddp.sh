@@ -1,7 +1,7 @@
-CUDA_VISIBLE_DEVICES=7 python ddp.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchnn --standlone --nproc_per_node=1  ddp.py \
     --total_epochs 10 \
     --save_every 1 \
-    --batch_size 8 \
+    --batch_size 1 \
     --model 'Llama-2-7b' \
     --data_folder 'data' \
     --subject 'math' \
