@@ -43,7 +43,7 @@ class LlamaWithLayerWeights(LlamaForCausalLM):
         **kwargs: Unpack[KwargsForCausalLM],
     ) -> Union[Tuple, CausalLMOutputWithPast]:
 
-        relative_top = relative_top if relative_top is not None else 0.1
+        relative_top = relative_top if relative_top is not None else 0.001
         relative_top_value = relative_top_value if relative_top_value is not None else -1000.0
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -85,7 +85,7 @@ class LlamaWithLayerWeights(LlamaForCausalLM):
 
         if relative_top > 0.0:
             relative_top_mask = self.get_relative_top_filter(logits_last, relative_top)
-            diff_logits = torch.where(relative_top_mask, relative_top_value, logits)
+            logits = torch.where(relative_top_mask, relative_top_value, logits)
 
         loss = None
         if labels is not None:
