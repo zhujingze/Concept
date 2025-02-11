@@ -26,11 +26,11 @@ class MultipleChoiceConcatWODataset(Dataset):
         #input_text += "<options>:\n"
         for choice in choices:
             answer_text.append(f"{choice}")
-        input_text += "Answer: "
+        input_text += "Answer:"
         #input_text = prompt_text + input_text
         
         for i in range(len(choices)):
-            final_text.append(input_text + answer_text[i])
+            final_text.append(input_text + " " + answer_text[i])
 
         prefix_encoding = self.tokenizer(input_text, return_tensors='pt')
         encodings = self.tokenizer(
