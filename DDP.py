@@ -94,7 +94,7 @@ class Trainer:
         self.epochs_run = snapshot["EPOCHS_RUN"]
         print(f"Resuming training from snapshot at Epoch {self.epochs_run}")
 
-    def _run_batch(self, input_ids, attention_mask, label, method, epoch, pre_ids=None):
+    def _run_batch(self, input_ids, attention_mask, label, method, epoch, prefix_ids=None):
         if self.method == 'letter':
             self.optimizer.zero_grad()
             out_idxs = []
