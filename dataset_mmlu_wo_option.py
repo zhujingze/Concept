@@ -14,6 +14,21 @@ class MultipleChoiceConcatWODataset(Dataset):
     def __len__(self):
         return len(self.data)
 
+    def get_example(self):
+        example_text = ''
+        for idx in range(5):
+            question = self.example_data.iloc[idx, 0]
+            choices = [self.example_data.iloc[idx, i+1] for i in range(4)]
+            answer = self.example_data.iloc[idx, 5]
+            #example_text += "<question>:\n"
+            example_text += f"Question: {question}\n"
+            #example_text += "<options>:\n"
+            correct_choice_idx = self.choices.index(answer)
+            correct_answer_text = choices[correct_choice_idx]
+            example_text += f"Answer: {correct_answer_text}\n\n"
+
+        return example_text
+
     def __getitem__(self, idx):
         question = self.data.iloc[idx, 0]
         choices = [self.data.iloc[idx, i+1] for i in range(4)]
