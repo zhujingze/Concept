@@ -123,8 +123,8 @@ class Trainer:
             for i in range(attention_mask.size(0)):
                 input_ids_sample = input_ids[i]
                 attention_mask_sample = attention_mask[i]
-                prefix_len = pre_len[i]
-                answer_ids = input_ids_sample[:, prefix_len-1:]
+                prefix_id = prefix_ids[i]
+                answer_ids = input_ids_sample[:, prefix_id.shape[-1]:]
                 real_answer_ids = []
                 for row in answer_ids:
                     idx = (row != 2).nonzero(as_tuple=True)[0].max().item()
@@ -137,14 +137,10 @@ class Trainer:
                 one_batch = []
                 for j in range(attention_mask_sample.size(0)):
                     num = len(real_answer_ids[j])
-                    start_idx = pre_len[i].to(self.gpu_id)
-                    idx_range = torch.arange(num).unsqueeze(0).expand(1, num).to(self.gpu_id)
-                    start_idx_tensor = start_idx.clone().unsqueeze(0).expand(1, num) - 2
-                    final_idx = start_idx_tensor + idx_range
-                    
-                    logits_selected = outputs.logits[j][final_idx]
-                    real_answer_ids[j] = real_answer_ids[j].unsqueeze(0)
-                    logits_selected = logits_selected[0, torch.arange(num), real_answer_ids[j].squeeze(0)]
+                    start_idx = prefix_id.shape[-1] - 1
+                    logits_selected = outputs.logits[j][start_idx:start_idx+num]
+
+                    logits_selected = logits_selected[torch.arange(num), real_answer_ids[j]]
                     logits_selected = logits_selected.sum()
                     # logits_selected = logits_selected.sum() / num
                     one_batch.append(logits_selected)
@@ -218,8 +214,8 @@ class Trainer:
                     for i in range(attention_mask.size(0)):
                         input_ids_sample = input_ids[i]
                         attention_mask_sample = attention_mask[i]
-                        prefix_len = prefix_ids_len[i]
-                        answer_ids = input_ids_sample[:, prefix_len-1:]
+                        prefix_id = prefix_ids[i]
+                        answer_ids = input_ids_sample[:, prefix_id.shape[-1]:]
                         real_answer_ids = []
                         for row in answer_ids:
                             idx = (row != 2).nonzero(as_tuple=True)[0].max().item()
@@ -233,14 +229,10 @@ class Trainer:
                         one_batch_norm = []
                         for j in range(attention_mask_sample.size(0)):
                             num = len(real_answer_ids[j])
-                            start_idx = prefix_ids_len[i].to(self.gpu_id)
-                            idx_range = torch.arange(num).unsqueeze(0).expand(1, num).to(self.gpu_id)
-                            start_idx_tensor = start_idx.clone().unsqueeze(0).expand(1, num) - 2
-                            final_idx = start_idx_tensor + idx_range
-                            
-                            logits_selected = outputs.logits[j][final_idx]
-                            real_answer_ids[j] = real_answer_ids[j].unsqueeze(0)
-                            logits_selected = logits_selected[0, torch.arange(num), real_answer_ids[j].squeeze(0)]
+                            start_idx = prefix_id.shape[-1] - 1
+                            logits_selected = outputs.logits[j][start_idx:start_idx+num]
+
+                            logits_selected = logits_selected[torch.arange(num), real_answer_ids[j]]
                             logits_selected = logits_selected.sum()
                             logits_selected_norm = logits_selected.sum() / num
                             
@@ -258,10 +250,11 @@ class Trainer:
                     res = compute_accuracy(logits, label)
                     results = torch.cat([results, res], dim=0)
     
-            # Synchronize results across all GPUs
-            results = sync_across_gpus(results, self.world_size)
+            # # Synchronize results across all GPUs
+            # results = sync_across_gpus(results, self.world_size)
             # Calculate the mean accuracy
             mean_acc = (results.sum() / len(results)).item()  # Compute the average accuracy
+            print('Accuracy:', mean_acc, 'total num:', len(results))
         
             return mean_acc
 
