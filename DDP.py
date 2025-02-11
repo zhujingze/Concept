@@ -164,7 +164,7 @@ class Trainer:
             if method == 'letter':
                 self._run_batch(input_ids, attention_mask, label, method, epoch)
             if method == 'wo_option':
-                pre_len = batch["prefix_ids_len"].to(self.gpu_id)
+                prefix_ids = batch["prefix_ids"].to(self.gpu_id)
                 self._run_batch(input_ids, attention_mask, label, method, epoch, pre_len)
 
     def _save_snapshot(self, epoch):
