@@ -18,7 +18,7 @@ class MultipleChoiceConcatWODataset(Dataset):
         question = self.data.iloc[idx, 0]
         choices = [self.data.iloc[idx, i+1] for i in range(4)]
         answer = self.data.iloc[idx, 5]
-        prompt_text = f"The following are multiple choice questions (with answers) about {self.subject}.\n\n"
+        #prompt_text = f"The following are multiple choice questions (with answers) about {self.subject}.\n\n"
         answer_text = []
         final_text = []
         #input_text = "<question>:\n"
@@ -27,7 +27,7 @@ class MultipleChoiceConcatWODataset(Dataset):
         for choice in choices:
             answer_text.append(f"{choice}")
         input_text += "Answer: "
-        input_text = prompt_text + input_text
+        #input_text = prompt_text + input_text
         
         for i in range(len(choices)):
             final_text.append(input_text + answer_text[i])
@@ -45,6 +45,6 @@ class MultipleChoiceConcatWODataset(Dataset):
         return {
             "input_ids": encodings["input_ids"],
             "attention_mask": encodings["attention_mask"],
-            "prefix_ids_len": len(prefix_encoding["input_ids"][0]),
+            "prefix_ids": prefix_encoding["input_ids"][0],
             "label": torch.tensor(label)
         }
