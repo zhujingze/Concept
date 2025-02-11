@@ -94,7 +94,7 @@ class Trainer:
         self.epochs_run = snapshot["EPOCHS_RUN"]
         print(f"Resuming training from snapshot at Epoch {self.epochs_run}")
 
-    def _run_batch(self, input_ids, attention_mask, label, method, epoch, pre_len=None):
+    def _run_batch(self, input_ids, attention_mask, label, method, epoch, pre_ids=None):
         if self.method == 'letter':
             self.optimizer.zero_grad()
             out_idxs = []
@@ -164,8 +164,8 @@ class Trainer:
             if method == 'letter':
                 self._run_batch(input_ids, attention_mask, label, method, epoch)
             if method == 'wo_option':
-                prefix_ids = batch["prefix_ids"].to(self.gpu_id)
-                self._run_batch(input_ids, attention_mask, label, method, epoch, pre_len)
+                pre_ids = batch["prefix_ids"].to(self.gpu_id)
+                self._run_batch(input_ids, attention_mask, label, method, epoch, pre_ids)
 
     def _save_snapshot(self, epoch):
         if self.save_folder:
