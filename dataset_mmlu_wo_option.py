@@ -37,12 +37,13 @@ class MultipleChoiceConcatWODataset(Dataset):
         answer_text = []
         final_text = []
         #input_text = "<question>:\n"
+        prompt_text = self.get_example()
         input_text = f"Question: {question}\n"
         #input_text += "<options>:\n"
         for choice in choices:
             answer_text.append(f"{choice}")
         input_text += "Answer:"
-        #input_text = prompt_text + input_text
+        input_text = prompt_text + input_text
         
         for i in range(len(choices)):
             final_text.append(input_text + " " + answer_text[i])
