@@ -18,6 +18,8 @@ print("Filtered JSON saved.")
 
 from transformers import AutoModelForCausalLM
 
+from transformers import AutoModelForCausalLM
+
 # 加载模型
 model = AutoModelForCausalLM.from_pretrained(args.model)
 
@@ -25,8 +27,13 @@ model = AutoModelForCausalLM.from_pretrained(args.model)
 src_layer_idx = 31
 src_layer = model.model.layers[src_layer_idx]
 
-# 创建新层并复制参数
-new_layer = type(src_layer)(model.config)  # 重要：根据模型结构初始化
+# 确定新层的索引
+new_layer_idx = len(model.model.layers)  # 新层的索引是当前最后一层的索引加1
+
+# 创建新层并传递 layer_idx 参数
+new_layer = type(src_layer)(model.config, layer_idx=new_layer_idx)  # 传递 layer_idx
+
+# 复制源层参数到新层
 new_layer.load_state_dict(src_layer.state_dict())
 
 # 添加新层到末尾
