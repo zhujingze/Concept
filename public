@@ -15,3 +15,34 @@ with open('filtered_file.json', 'w') as outfile:
     json.dump(result, outfile, indent=4)
 
 print("Filtered JSON saved.")
+
+from transformers import AutoModelForCausalLM
+
+# 加载模型
+model = AutoModelForCausalLM.from_pretrained(args.model)
+
+# 假设要复制的层是第32层（索引31）
+src_layer_idx = 31
+src_layer = model.model.layers[src_layer_idx]
+
+# 创建新层并复制参数
+new_layer = type(src_layer)(model.config)  # 重要：根据模型结构初始化
+new_layer.load_state_dict(src_layer.state_dict())
+
+# 添加新层到末尾
+model.model.layers.append(new_layer)
+
+# 更新模型配置中的层数
+model.config.num_hidden_layers = len(model.model.layers)
+
+# 验证新增的层
+print(f"总层数: {len(model.model.layers)}")
+print(f"最后一层参数是否独立: {id(new_layer) != id(src_layer)}")  # 应输出True
+
+### 多次copy
+num_copies = 3
+for _ in range(num_copies):
+    new_layer = type(src_layer)(model.config)
+    new_layer.load_state_dict(src_layer.state_dict())
+    model.model.layers.append(new_layer)
+model.config.num_hidden_layers += num_copies
