@@ -41,9 +41,9 @@ def main(args):
         os.makedirs(args.save_folder, exist_ok=True)
 
     #ori
-    total_correct = 0
-    total_correct_norm = 0
-    total_samples = 0
+    total_correct = []
+    total_scale = []
+    total_max = []
     if args.method == "letter":
         for batch in train_loader:
             input_ids = batch["input_ids"].to(device)
@@ -59,15 +59,38 @@ def main(args):
         
             out_idxs = torch.tensor(out_idxs, device = device)
             out_idxs = out_idxs.unsqueeze(1)
-              
-            logits = outputs.logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, outputs.logits.size(-1)).long())
-            logits = logits.squeeze(1)
-            logits = logits[:, [319, 350, 315, 360]]
-            logits = logits.to(device)
-            batch_accuracy = compute_accuracy(logits, label)
-            total_correct += (batch_accuracy * label.size(0))
+
+            for layer_idx in range(outputs.logits.size(0)):
+                logits = outputs.logits[layer_idx]
+                logits = logits.unsqueeze(0)
+                logits = logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, logits.size(-1)).long())
+                logits = logits.squeeze(1)
+
+                max, idx = torch.max(logits.flatten(), dim=-1)
+                
+                logits = logits[:, [319, 350, 315, 360]]
+                max = torch.max(logits)
+                scale = torch.floor(torch.log10(max)).item()
+                max=max.item()
+                if len(total_scale) < (layer_idx+1):
+                    total_scale.append(scale)
+                    total_max.append(max)
+                else:
+                    total_scale[layer_idx] += scale
+                    total_max[layer_idx] += max
+                    
+                logits = logits.to(device)
+                batch_accuracy = compute_accuracy(logits, label)
+                if len(total_correct) < (layer_idx+1):
+                    total_correct.append(batch_accuracy * label.size(0))
+                else:
+                    total_correct[layer_idx] += batch_accuracy * label.size(0)
+                
             total_samples += label.size(0)
 
+    for idx, acc in enumerate(total_correct):
+        print(f"Layer {idx+1} Acc: {acc / total_samples*100:.2f}%")
+        
     if args.method in ['concat', 'wo_option']:
         for batch in train_loader:
             input_ids = batch["input_ids"].to(device)
