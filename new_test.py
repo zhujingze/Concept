@@ -3,6 +3,7 @@ total_scale = []
 total_max = []
 total_entropy = []  # 用于累积每层的熵总和
 total_kl = []       # 用于累积每层的KL散度总和（层i对应与层i-1的KL）
+total_samples = 0
 
 if args.method == "letter":
     for batch in train_loader:
@@ -47,7 +48,7 @@ if args.method == "letter":
             # 计算KL散度（相对于前一层）
             if prev_probs is not None:
                 # KL(p_current || p_prev)
-                kl = (probs * (torch.log(probs + epsilon) - probs * torch.log(prev_probs + epsilon)).sum(dim=1)
+                kl = (probs * (torch.log(probs + epsilon) - probs * torch.log(prev_probs + epsilon))).sum(dim=1)
                 kl_sum = kl.sum().item()  # 当前层的KL总和
 
                 # 确定KL对应的索引（layer_idx-1）
