@@ -53,3 +53,50 @@ for _ in range(num_copies):
     new_layer.load_state_dict(src_layer.state_dict())
     model.model.layers.append(new_layer)
 model.config.num_hidden_layers += num_copies
+
+        if layers_probs:
+            layers_probs = torch.stack(layers_probs, dim=0)  # (num_layers, batch_size, 4)
+            num_layers = layers_probs.size(0)
+
+            # 初始化JS散度矩阵
+            js_matrix = torch.zeros((num_layers, num_layers), device=device)
+
+            # 计算所有层对之间的JS散度
+            for i in range(num_layers):
+                for j in range(num_layers):
+                    js_matrix[i, j] = js_divergence(layers_probs[i], layers_probs[j]).mean()
+
+            # 累积到总矩阵
+            if total_js_matrix is None:
+                total_js_matrix = js_matrix.cpu()
+            else:
+                total_js_matrix += js_matrix.cpu()
+            total_samples += batch_size
+
+        # 原有的准确率、熵等计算
+        # ... [原有代码] ...
+
+# 计算平均JS散度矩阵并生成热力图
+if total_js_matrix is not None and total_samples > 0:
+    avg_js_matrix = total_js_matrix / total_samples
+    num_layers = avg_js_matrix.size(0)
+    layer_labels = [f"Layer {16 + i}" for i in range(num_layers)]
+
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(
+        avg_js_matrix.numpy(),
+        annot=True,
+        fmt=".4f",
+        xticklabels=layer_labels,
+        yticklabels=layer_labels,
+        cmap="coolwarm",
+        cbar_kws={'label': 'Average JS Divergence'}
+    )
+    plt.title("JS Divergence Between Layers (Starting from Layer 16)")
+    plt.xlabel("Target Layer (j)")
+    plt.ylabel("Source Layer (i)")
+    plt.tight_layout()
+    plt.savefig("js_heatmap_layer16_onwards.png")
+    plt.close()
+else:
+    print("No layers beyond 16 were processed for JS divergence calculation.")
