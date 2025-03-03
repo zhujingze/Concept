@@ -5,6 +5,22 @@ total_entropy = []  # 用于累积每层的熵总和
 total_kl = []       # 用于累积每层的KL散度总和（层i对应与层i-1的KL）
 total_samples = 0
 
+def js_divergence(p, q, epsilon=1e-8):
+    """
+    计算两个概率分布之间的Jensen-Shannon散度。
+    Args:
+        p: 概率分布 (batch_size, num_classes)
+        q: 概率分布 (batch_size, num_classes)
+        epsilon: 防止log(0)的小值
+    Returns:
+        JS散度 (batch_size,)
+    """
+    m = 0.5 * (p + q)  # 中间分布
+    kl_p_m = F.kl_div(torch.log(p + epsilon), m, reduction='none').sum(dim=-1)  # KL(P || M)
+    kl_q_m = F.kl_div(torch.log(q + epsilon), m, reduction='none').sum(dim=-1)  # KL(Q || M)
+    js = 0.5 * (kl_p_m + kl_q_m)  # JS(P || Q)
+    return js
+
 if args.method == "letter":
     for batch in train_loader:
         input_ids = batch["input_ids"].to(device)
