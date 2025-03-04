@@ -114,3 +114,84 @@ for kl_idx, kl_sum in enumerate(total_kl):
     avg_kl = kl_sum / total_samples
     layer_idx = kl_idx + 1  # KL散度对应层i与层i-1（i从1开始）
     print(f"Layer {layer_idx+1} KL Divergence (vs Layer {layer_idx}): {avg_kl:.4f}")
+
+###
+    def logits_to_onehot(logits):
+    """
+    将logits转换为one-hot形式。
+    Args:
+        logits: (batch_size, num_classes)
+    Returns:
+        onehot: (batch_size, num_classes)
+    """
+    max_indices = torch.argmax(logits, dim=-1)  # 找到最大值的位置
+    onehot = torch.zeros_like(logits)
+    onehot.scatter_(1, max_indices.unsqueeze(1), 1)  # 将最大值位置设为1
+    return onehot
+        # 收集各层one-hot结果（从第16层开始）
+        layers_onehot = []
+        for layer_idx in range(outputs.logits.size(0)):
+            logits = outputs.logits[layer_idx].unsqueeze(0)
+            logits = logits.gather(1, out_idxs.unsqueeze(-1).expand(-1, -1, logits.size(-1)).squeeze(1)
+            logits = logits[:, [319, 350, 315, 360]]  # 提取特定token
+
+            # 转换为one-hot形式
+            onehot = logits_to_onehot(logits)
+            if layer_idx >= 15:  # 第16层对应索引15（假设层索引从0开始）
+                layers_onehot.append(onehot.detach())  # 避免梯度计算
+
+            # 原有熵和准确率计算（保持不变）
+            # ... [原有代码] ...
+
+        # 计算一致性矩阵（仅当存在至少一个层时）
+        if layers_onehot:
+            layers_onehot = torch.stack(layers_onehot, dim=0)  # (num_layers, batch_size, 4)
+            num_layers = layers_onehot.size(0)
+
+            # 初始化一致性矩阵
+            consistency_matrix = torch.zeros((num_layers, num_layers), device=device)
+
+            # 计算所有层对之间的一致性
+            for i in range(num_layers):
+                for j in range(num_layers):
+                    # 计算一致性（相同位置为1的比例）
+                    agreement = (layers_onehot[i] == layers_onehot[j]).all(dim=-1).float().mean()
+                    consistency_matrix[i, j] = agreement
+
+            # 累积到总矩阵
+            if total_consistency_matrix is None:
+                total_consistency_matrix = consistency_matrix.cpu()
+            else:
+                total_consistency_matrix += consistency_matrix.cpu()
+            total_samples += batch_size
+
+        # 原有的准确率、熵等计算
+        # ... [原有代码] ...
+
+# 计算平均一致性矩阵并生成热力图
+if total_consistency_matrix is not None and total_samples > 0:
+    avg_consistency_matrix = total_consistency_matrix / total_samples
+    num_layers = avg_consistency_matrix.size(0)
+    layer_labels = [f"Layer {16 + i}" for i in range(num_layers)]
+
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(
+        avg_consistency_matrix.numpy(),
+        annot=True,
+        fmt=".4f",
+        xticklabels=layer_labels,
+        yticklabels=layer_labels,
+        cmap="coolwarm",
+        vmin=0,
+        vmax=1,
+        cbar_kws={'label': 'Consistency'}
+    )
+    plt.title("Decision Consistency Between Layers (Starting from Layer 16)")
+    plt.xlabel("Target Layer (j)")
+    plt.ylabel("Source Layer (i)")
+    plt.tight_layout()
+    plt.savefig("consistency_heatmap_layer16_onwards.png")
+    plt.close()
+else:
+    print("No layers beyond 16 were processed for consistency calculation.")
+###
