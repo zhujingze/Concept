@@ -196,27 +196,30 @@ else:
     print("No layers beyond 16 were processed for consistency calculation.")
 ###
 # 计算每一层的选择频率并可视化
+# 计算每一层的选择频率并生成热力图
 if total_layer_choices is not None and total_samples > 0:
     avg_layer_choices = total_layer_choices / total_samples  # (num_layers, 4)
     num_layers = avg_layer_choices.size(0)
     class_labels = ["Class 319", "Class 350", "Class 315", "Class 360"]
 
-    # 绘制每一层的选择倾向
-    plt.figure(figsize=(12, 8))
-    for layer_idx in range(num_layers):
-        plt.bar(
-            np.arange(len(class_labels)) + layer_idx * 0.2,
-            avg_layer_choices[layer_idx],
-            width=0.2,
-            label=f"Layer {16 + layer_idx}"
-        )
-    plt.xticks(np.arange(len(class_labels)) + 0.2 * (num_layers - 1) / 2, class_labels)
-    plt.xlabel("Class")
-    plt.ylabel("Selection Frequency")
+    # 绘制选择频率热力图
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(
+        avg_layer_choices.numpy(),
+        annot=True,
+        fmt=".4f",
+        xticklabels=class_labels,
+        yticklabels=layer_labels,
+        cmap="viridis",
+        vmin=0,
+        vmax=1,
+        cbar_kws={'label': 'Selection Frequency'}
+    )
     plt.title("Selection Frequency per Layer (Starting from Layer 16)")
-    plt.legend()
+    plt.xlabel("Class")
+    plt.ylabel("Layer")
     plt.tight_layout()
-    plt.savefig("selection_frequency_per_layer.png")
+    plt.savefig("selection_frequency_heatmap.png")
     plt.close()
 else:
     print("No layers beyond 16 were processed for selection frequency calculation.")
