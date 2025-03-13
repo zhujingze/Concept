@@ -100,3 +100,92 @@ if total_js_matrix is not None and total_samples > 0:
     plt.close()
 else:
     print("No layers beyond 16 were processed for JS divergence calculation.")
+
+###nltk
+现今磷:
+以下是实现所需功能的Python函数：
+
+```python
+import torch
+from nltk import pos_tag
+import string
+
+def process_logits(tensor, tokens):
+    # 处理标点符号判断
+    punctuation = set(string.punctuation)
+    
+    def is_punctuation(tok):
+        return all(c in punctuation for c in tok)
+    
+    # 第一步：组合tokens成单词并记录对应列索引
+    current_word = None
+    current_columns = []
+    words = []
+    columns_list = []
+    
+    for i, token in enumerate(tokens):
+        if is_punctuation(token):
+            continue
+        
+        if token.startswith('▁'):
+            if current_word is not None:
+                words.append(current_word)
+                columns_list.append(current_columns)
+            current_word = token.lstrip('▁')
+            current_columns = [i]
+        else:
+            if current_word is not None:
+                current_word += token
+                current_columns.append(i)
+            else:
+                current_word = token
+                current_columns = [i]
+    
+    # 添加最后一个单词
+    if current_word is not None:
+        words.append(current_word)
+        columns_list.append(current_columns)
+    
+    if not words:
+        return None
+    
+    # 第二步：处理tensor生成新矩阵
+    processed_columns = []
+    for cols in columns_list:
+        summed = tensor[:, cols].sum(dim=1, keepdim=True)
+        processed_columns.append(summed)
+    
+    new_tensor = torch.cat(processed_columns, dim=1)
+    
+    # 第三步：词性标注并筛选名词
+    tagged = pos_tag(words)
+    noun_indices = [i for i, (_, tag) in enumerate(tagged) if tag.startswith('N')]
+    
+    if not noun_indices:
+        return None
+    
+    # 构造最终结果
+    filtered_tensor = new_tensor[:, noun_indices]
+    filtered_words = [words[i] for i in noun_indices]
+    
+    return filtered_tensor, filtered_words
+```
+
+4. **依赖项**：
+   - PyTorch
+   - NLTK（需要提前下载语料库：`nltk.download('averaged_perceptron_tagger')`）
+
+### 示例调用：
+```python
+# 示例数据
+tokens = ['▁m', 'R', 'NA', ',', '▁t', 'R', 'NA', '▁and', '▁rib', 'os', 'om', 'es', '.']
+tensor = torch.randn(32, len(tokens))  # 示例tensor
+
+result = process_logits(tensor, tokens)
+if result:
+    filtered_tensor, filtered_words = result
+    print("Filtered Words:", filtered_words)
+    print("Filtered Tensor Shape:", filtered_tensor.shape)
+else:
+    print("No nouns found")
+```
