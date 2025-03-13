@@ -189,3 +189,42 @@ if result:
 else:
     print("No nouns found")
 ```
+
+# 在循环外部创建画布和子图
+fig, axes = plt.subplots(2, 2, figsize=(24, 20))  # 2x2的画布
+axes = axes.flatten()  # 将二维数组转换为一维数组方便索引
+plt.suptitle(f"Logits Lens for Question {b_idx}", y=1.02)  # 总标题
+
+for i in range(len(option)):
+    # ... 保持原有的数据处理逻辑不变 ...
+    
+    # 修改绘图部分开始
+    ax = axes[i]  # 获取对应的子图
+    
+    # 保持原有的热图生成逻辑，增加ax参数
+    sns.heatmap(
+        layer_prob.cpu().detach().numpy(),
+        annot=True,
+        fmt=".4f",
+        xticklabels=token_labels,
+        yticklabels=layer_labels,
+        cmap="coolwarm",
+        vmin=0,
+        vmax=1,
+        cbar_kws={'label': 'Logits'},
+        ax=ax  # 关键修改：指定子图位置
+    )
+    
+    # 子图装饰
+    ax.xaxis.tick_top()
+    ax.xaxis.set_label_position('top')
+    ax.set_title(f"Option {chr(65+i)} ({res})", pad=20)  # 用ABCD表示选项
+    ax.set_xlabel("")
+    ax.set_ylabel("Layer")
+
+# 调整全局布局并保存
+plt.tight_layout()
+if not os.path.exists(f"/root/zhujingze/mmlu/res/lens/{args.subject}"):
+    os.makedirs(f"/root/zhujingze/mmlu/res/lens/{args.subject}")
+plt.savefig(f"/root/zhujingze/mmlu/res/lens/{args.subject}/{args.subject}_Q{b_idx}_all.png")
+plt.close()
