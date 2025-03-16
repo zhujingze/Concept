@@ -228,3 +228,30 @@ if not os.path.exists(f"/root/zhujingze/mmlu/res/lens/{args.subject}"):
     os.makedirs(f"/root/zhujingze/mmlu/res/lens/{args.subject}")
 plt.savefig(f"/root/zhujingze/mmlu/res/lens/{args.subject}/{args.subject}_Q{b_idx}_all.png")
 plt.close()
+
+
+###attn
+import matplotlib.pyplot as plt
+
+def visualize_attention(attention_matrix, tokens):
+    plt.figure(figsize=(10, 10))
+    plt.imshow(attention_matrix, cmap='viridis')
+    plt.xticks(range(len(tokens)), tokens, rotation=90)
+    plt.yticks(range(len(tokens)), tokens)
+    plt.colorbar()
+    plt.show()
+
+# 示例用法
+tokens = tokenizer.convert_ids_to_tokens(input_ids_sample[0])
+visualize_attention(single_head_attn.detach().numpy(), tokens)
+
+# 查看当前token对前序token的关注度
+current_token_idx = -1  # 最后一个token
+attention_to_prefix = single_head_attn[current_token_idx, :prefix_len]
+
+# 计算所有头的平均注意力
+mean_attn = last_layer_attn.mean(dim=1)[0]  # [seq_len, seq_len]
+
+# 提取特定头的注意力（示例取第一个头）
+    head_idx = 0
+    single_head_attn = last_layer_attn[0, head_idx]  # [seq_len, seq_len]
