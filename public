@@ -308,3 +308,70 @@ def process_logits(tokens):
     first_token_indices = [columns_list[i][0] for i in noun_indices]
 
     return first_token_indices
+
+###import csv
+import re
+
+def calculate_difference(option1, option2):
+    """计算两个选项之间的单词差异数（忽略大小写和标点）"""
+    def preprocess(text):
+        text = re.sub(r'[^\w\s]', '', text.lower())
+        return text.split()
+    
+    words1 = preprocess(option1)
+    words2 = preprocess(option2)
+    
+    len1, len2 = len(words1), len(words2)
+    min_len = min(len1, len2)
+    
+    # 计算共同长度内的不同单词数
+    diff = sum(1 for i in range(min_len) if words1[i] != words2[i])
+    # 加上长度差异
+    diff += abs(len1 - len2)
+    return diff
+
+def filter_csv(input_file, output_file):
+    """筛选符合条件的CSV数据"""
+    with open(input_file, 'r', newline='', encoding='utf-8') as infile, \
+         open(output_file, 'w', newline='', encoding='utf-8') as outfile:
+        
+        reader = csv.reader(infile)
+        writer = csv.writer(outfile)
+        
+        # 读取并写入标题行
+        header = next(reader)
+        writer.writerow(header)
+        
+        for row in reader:
+            # 假设列顺序为：问题，A，B，C，D，答案
+            if len(row) < 6:
+                continue  # 跳过不完整的行
+            
+            question = row[0]
+            options = row[1:5]  # A, B, C, D
+            answer = row[5].upper().strip()  # 答案字母
+            
+            # 确定正确选项的索引（0对应A，1对应B，依此类推）
+            answer_index = ord(answer) - ord('A')
+            if answer_index < 0 or answer_index >= 4:
+                continue  # 无效答案，跳过
+            
+            correct_option = options[answer_index]
+            other_indices = [i for i in range(4) if i != answer_index]
+            other_options = [options[i] for i in other_indices]
+            
+            # 检查所有其他选项与正确答案的差异
+            valid = True
+            for opt in other_options:
+                diff = calculate_difference(correct_option, opt)
+                if diff > 2:
+                    valid = False
+                    break
+            
+            if valid:
+                writer.writerow(row)
+
+# 示例用法
+input_filename = 'input.csv'  # 输入的CSV文件名
+output_filename = 'output.csv'  # 输出的CSV文件名
+filter_csv(input_filename, output_filename)
