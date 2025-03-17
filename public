@@ -256,44 +256,55 @@ mean_attn = last_layer_attn.mean(dim=1)[0]  # [seq_len, seq_len]
     head_idx = 0
     single_head_attn = last_layer_attn[0, head_idx]  # [seq_len, seq_len]
 ###
-punctuation = set(string.punctuation)
+import string
+from nltk import pos_tag
 
-def is_punctuation(tok):
-    return all(c in punctuation for c in tok)
+def process_logits(tokens):
+    punctuation = set(string.punctuation)
 
-current_word = None
-current_columns = []
-words = []
-columns_list = []
+    def is_punctuation(tok):
+        return all(c in punctuation for c in tok)
 
-for i, token in enumerate(tokens):
-    if is_punctuation(token):
-        continue
-    
-    if token.startswith('▁'):
-        if current_word is not None:
-            words.append(current_word)
-            columns_list.append(current_columns)
-        current_word = token.lstrip('▁')
-        current_columns = [i]
-    else:
-        if current_word is not None:
-            current_word += token
-            current_columns.append(i)
+    # 组合tokens成单词并记录对应列索引
+    current_word = None
+    current_columns = []
+    words = []
+    columns_list = []
+
+    for i, token in enumerate(tokens):
+        if is_punctuation(token):
+            continue  # 跳过标点符号
+
+        if token.startswith('▁'):
+            # 新单词开始
+            if current_word is not None:
+                words.append(current_word)
+                columns_list.append(current_columns)
+            current_word = token.lstrip('▁')  # 去掉前缀
+            current_columns = [i]  # 记录当前token的索引
         else:
-            current_word = token
-            current_columns = [i]
+            # 继续当前单词
+            if current_word is not None:
+                current_word += token
+                current_columns.append(i)
+            else:
+                # 处理没有前缀的特殊情况（如首个token）
+                current_word = token
+                current_columns = [i]
 
-if current_word is not None:
-    words.append(current_word)
-    columns_list.append(current_columns)
+    # 添加最后一个单词
+    if current_word is not None:
+        words.append(current_word)
+        columns_list.append(current_columns)
 
-if not words:
-    return []
+    if not words:
+        return []
 
-tagged = pos_tag(words)
-noun_indices = [i for i, (_, tag) in enumerate(tagged) if tag.startswith('N')]
+    # 词性标注并筛选名词
+    tagged = pos_tag(words)
+    noun_indices = [i for i, (_, tag) in enumerate(tagged) if tag.startswith('N')]
 
-first_token_indices = [columns_list[i][0] for i in noun_indices]
+    # 提取每个名词对应的第一个token的索引
+    first_token_indices = [columns_list[i][0] for i in noun_indices]
 
-return first_token_indices
+    return first_token_indices
