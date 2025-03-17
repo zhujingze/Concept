@@ -255,3 +255,45 @@ mean_attn = last_layer_attn.mean(dim=1)[0]  # [seq_len, seq_len]
 # 提取特定头的注意力（示例取第一个头）
     head_idx = 0
     single_head_attn = last_layer_attn[0, head_idx]  # [seq_len, seq_len]
+###
+punctuation = set(string.punctuation)
+
+def is_punctuation(tok):
+    return all(c in punctuation for c in tok)
+
+current_word = None
+current_columns = []
+words = []
+columns_list = []
+
+for i, token in enumerate(tokens):
+    if is_punctuation(token):
+        continue
+    
+    if token.startswith('▁'):
+        if current_word is not None:
+            words.append(current_word)
+            columns_list.append(current_columns)
+        current_word = token.lstrip('▁')
+        current_columns = [i]
+    else:
+        if current_word is not None:
+            current_word += token
+            current_columns.append(i)
+        else:
+            current_word = token
+            current_columns = [i]
+
+if current_word is not None:
+    words.append(current_word)
+    columns_list.append(current_columns)
+
+if not words:
+    return []
+
+tagged = pos_tag(words)
+noun_indices = [i for i, (_, tag) in enumerate(tagged) if tag.startswith('N')]
+
+first_token_indices = [columns_list[i][0] for i in noun_indices]
+
+return first_token_indices
