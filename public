@@ -375,3 +375,24 @@ def filter_csv(input_file, output_file):
 input_filename = 'input.csv'  # 输入的CSV文件名
 output_filename = 'output.csv'  # 输出的CSV文件名
 filter_csv(input_filename, output_filename)
+
+plt.figure(figsize=(10, 4))
+
+# 将 Tensor 转换为 NumPy 数组并展平
+np_data = normalized_data.squeeze().cpu().numpy()  # 处理设备及维度
+
+# 绘制折线图
+plt.plot(np_data, marker='o', linestyle='-', color='b', label='Normalized Value')
+
+# 标注极值点
+plt.scatter(np.argmin(np_data), np.min(np_data), color='r', s=100, label=f'Min ({np.min(np_data):.2f})')
+plt.scatter(np.argmax(np_data), np.max(np_data), color='g', s=100, label=f'Max ({np.max(np_data):.2f})')
+
+# 添加标签和标题
+plt.title("Normalized Amplitude Variation (Range: 0 to 1)")
+plt.xlabel("Data Index")
+plt.ylabel("Normalized Value")
+plt.ylim(-0.1, 1.1)  # 扩展 y 轴范围以便观察边界值
+plt.grid(linestyle='--', alpha=0.6)
+plt.legend()
+plt.show()
