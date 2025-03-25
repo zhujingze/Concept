@@ -474,3 +474,49 @@ def filter_csv(input_file, output_file):
 input_filename = 'input.csv'
 output_filename = 'output.csv'
 filter_csv(input_filename, output_filename)
+
+def process_diff(token_seq, logits_source, answer_idx, other_idx, b_idx, is_word=False):
+    # 获取最小长度和差异位置
+    min_len = min(len(token_seq[answer_idx]), len(token_seq[other_idx]))
+    find_diff = False
+    
+    # 查找第一个差异位置
+    for token_diff_idx in range(min_len):
+        if token_seq[answer_idx][token_diff_idx] != token_seq[other_idx][token_diff_idx]:
+            break
+    else:
+        token_diff_idx = min_len - 1  # 没有找到差异时使用最后一个位置
+    
+    # 处理logits
+    if args.logits_change_norm:
+        process_logits = lambda x: logits_change_nm(x)
+    else:
+        process_logits = lambda x: x
+
+    # 获取对应logits
+    logits_true = process_logits(logits_source[answer_idx][:, token_diff_idx])
+    logits_false = process_logits(logits_source[other_idx][:, token_diff_idx])
+
+    # 处理不同b_idx的情况
+    if b_idx == 0:
+        return logits_true, logits_false, logits_true, logits_false
+    else:
+        return logits_true, logits_false, logits_true, logits_false
+
+# 主逻辑
+if answer_letter in [max1_idx, max2_idx]:
+    other_idx = max2_idx if answer_letter == max1_idx else max1_idx
+else:
+    other_idx = max1_idx
+
+# 处理token差异
+(logits_true, logits_false, 
+ token_first_sample, token_first_sample_false) = process_diff(
+    token_first, logits_tmp, answer_letter, other_idx, b_idx
+)
+
+# 处理word差异
+(logits_true_word, logits_false_word,
+ token_first_word_sample, token_first_word_sample_false) = process_diff(
+    token_first_word, logits_tmp_word, answer_letter, other_idx, b_idx, is_word=True
+)
