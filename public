@@ -520,3 +520,18 @@ else:
  token_first_word_sample, token_first_word_sample_false) = process_diff(
     token_first_word, logits_tmp_word, answer_letter, other_idx, b_idx, is_word=True
 )
+
+gs = gridspec.GridSpec(2, 1, height_ratios=[7, 3])  # 比例可自行调整
+fig = plt.figure(figsize=(12, 15))
+
+# 创建子图
+ax0 = fig.add_subplot(gs[0])  # 第一个子图
+ax1 = fig.add_subplot(gs[1])  # 第二个子图
+
+# 调整子图间距（可选）
+plt.subplots_adjust(hspace=0.4)  # 控制行间距
+
+# 绘制内容
+ax0.plot([1,2,3], label='图1')
+ax1.plot([3,2,1], label='图2')
+plt.show()
